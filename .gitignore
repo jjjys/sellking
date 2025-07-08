@@ -1,0 +1,10 @@
+.env
+*.env
+
+.sellking/
+sellking/
+
+.vscode/
+
+data/captcha
+data/1차 테스트 결과

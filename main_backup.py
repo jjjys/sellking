@@ -93,7 +93,7 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
         }
         return result
     
-'''
+
 def close_other_windows(driver=None):
     # 현재 윈도우 핸들 저장
     current_handle = driver.current_window_handle
@@ -107,13 +107,13 @@ def close_other_windows(driver=None):
     
     # 다시 현재 핸들로 전환
     driver.switch_to.window(current_handle)
-''' 
+    
 def check_alert(driver=None):
     try:
         # 경고창 확인 시도
         alert = driver.switch_to.alert
-        print("경고창이 확인됨.\n경고창 내용:", alert.text)
-        return alert.text
+        print("경고창이 존재합니다: ", alert.text)
+        return True
     except NoAlertPresentException:
         print("경고창이 없습니다.")
         return False
@@ -128,7 +128,6 @@ def building_register_issuance_settings(driver=None):
     
     # 건축물대장 발급/열람 페이지 이동
     #'발급 사이트로 바로 이동 불가 driver.get('https://www.gov.kr/mw/EgovPageLink.do?link=minwon/AA040_std_form')
-    time.sleep(1)
     if driver.current_url != 'https://www.gov.kr/mw/EgovPageLink.do?link=minwon/AA040_std_form':
         try:
             driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
@@ -195,8 +194,8 @@ def building_register_issuance_settings(driver=None):
 
 def search_address(driver=None, address='주소'):
     '''
-    desc: 주소창 선택하기 팝업에서 입력받은 주소를 선택
-    return: JSON 형식의 딕셔너리 {"success": bool, "message": str}
+    desc:주소창 선택하기 팝업에서 입력받은 주소를 선택
+    return: True/False, false_msg
     '''
     false_msg = ''
     # 현재 드라이버 핸들 저장 
@@ -214,7 +213,7 @@ def search_address(driver=None, address='주소'):
     for i in range(0,5):
         if len(driver.window_handles) > 1:
             # 안정성 고려: and driver.title=='주소검색'
-            print("새 창(주소) 확인되었습니다.")
+            print("새 창(주소) 확인!!")
             break
         print(f'새 창(주소) 탐색 중..({i+1}/5초)')
         time.sleep(1)
@@ -241,7 +240,7 @@ def search_address(driver=None, address='주소'):
               검색 범위가 넓은 경우: 서웉특별시''')
         driver.close()
         driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동/finally 고려
-        return {"success": False, "message": false_msg}
+        return False, false_msg
     if len(address_list) == 1: # 주소가 1개 나온 경우
         address_list[0].click()
     elif len(address_list) > 1: # 주소가 2개 이상 나온 경우
@@ -268,23 +267,17 @@ def search_address(driver=None, address='주소'):
         false_msg = '행정처리기관 추가 선택 필요'
         print(false_msg)
         driver.close()
-        driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동
-        return {"success": False, "message": false_msg}
+        return False, false_msg
     
     driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동
     time.sleep(1)
-    return {"success": True, "message": false_msg}
+    return True, false_msg
 
 def search_dong(driver=None, dong=None, num=None):
     '''
-    desc: 동 선택. 2개 이상일 경우 LLM 이용
-    param: driver, dong, num
-    return: JSON 형식의 딕셔너리 {
-        "success": bool,
-        "dong_list": list or null,
-        "selected_dong": str or null,
-        "ai_response": dict or null
-    }
+    desc:동 선책. 2개 이상일 경우 LLM 이용
+    parm:drv, dong
+    return: True/False, list
     '''
     
     # 주소 검색 버튼 클릭으로 새 창 띄우기
@@ -294,121 +287,98 @@ def search_dong(driver=None, dong=None, num=None):
     driver.execute_script("arguments[0].scrollIntoView(true);", search_element)
     search_element.click()
     
+
     # 새 창(동 선택창)으로 이동
-    for i in range(0, 6):
-        alert_msg = check_alert(driver=driver)
+    for i in range(0,10):
         if len(driver.window_handles) > 1:
-            print("새 창(동 선택 창) 확인되었습니다.")
-            driver.switch_to.window(driver.window_handles[1])  # 새 창 이동 
+            print("새 창(동 선택 창) 확인!!")
             break
-        # 동 검색결과 없음
-        elif (i > 4) or alert_msg:
-            if alert_msg:
-                # 경고창 닫기
-                WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
-                alert_msg = f'[경고창]{alert_msg}'
-            else:
-                alert_msg = '확인되는 동 팝업 창이 없습니다.'
-            # 기존 창으로 이동
-            driver.switch_to.window(driver.window_handles[0])
+        elif (i > 4) and check_alert(driver=driver):
+            '''
+            n초 대기. 늦게 새 창 나오는 것 고려.
+            # 동 검색 결과 안나오는 경우
+            WebDriverWait(driver, 10).until(EC.alert_is_present()).text
+            WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
+            return False, None
+            '''
+            print(f'경고창 확인됨.\n{WebDriverWait(driver, 10).until(EC.alert_is_present()).text}')
+            WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
+            driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동/finally 고려
             res = {
-                "정답": "",
+                "정답": "동 검색 결과 없음",
                 "신뢰도": "",
                 "추론이유": ""
             }
-            # 1.동 검색결과 없음(경고창 알림)
-            return {
-                "success": False,
-                "dong_list": alert_msg,
-                "selected_dong": "",
-                "ai_response": res
-            }
+            return None, res
         print(f'새 창(동) 탐색 중..({i+1}/5초)')
         time.sleep(1)
-       
+    driver.switch_to.window(driver.window_handles[1]) # 새 창 이동    
+    new_drv_hnd = driver.current_window_handle
 
     # 동 검색 결과 확인 
     time.sleep(1)
     dong_list = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".tbl_list.border"))
-    ).find_elements(By.CSS_SELECTOR, 'table tbody tr a')
+    ).find_elements(By.CSS_SELECTOR, ' table tbody tr a')
     print(f'동 출력 결과 개수: {len(dong_list)}개')
-    dong_1st = dong_list[0].text # 클릭 시 팝업 창 꺼지기 때문에 데이터 저장해놓고 사용.
-    
-    if len(dong_list) < 2:  # 동수가 1개 나온 경우
+    dong_list_text = ''
+    if len(dong_list) < 2: # 동수가 1개 나온 경우
+        dong_list_text = dong_list[0].text
+        #print(f'{dong_list_text}')
         dong_list[0].click()
+        # 드라이버 핸들 돌려 놓기
         driver.switch_to.window(driver.window_handles[0])
         res = {
-            "정답": dong_1st,
+            "정답": dong_list_text,
             "신뢰도": "100%",
             "추론이유": "선택지가 1개"
         }
         time.sleep(1)
-        # 2.동 검색결과 선택지 1개
-        return {
-            "success": True,
-            "dong_list": dong_1st,
-            "selected_dong": dong_1st,
-            "ai_response": res
-        }
-    else:  # 동수가 2개 이상 나온 경우
-        dong_list_text = [itm.text.strip() for itm in dong_list]
-        dong_list_text = '\n'.join(dong_list_text)
+        return dong_list_text, res
+    else: # 동수가  2개 이상 나온 경우
+        for idx, itm in enumerate(dong_list):
+            #print(f'{itm.text}')
+            dong_list_text = f'{dong_list_text}\n{itm.text}'
+        #print(dong_list_text)
         ai_res = openai_api(dong=dong, num=num, gov24_dong_num=dong_list_text, dong_or_num='동')
-        ai_res['정답'] = ai_res['정답'].strip()
-        
-        # ai 응답이 확률적으로 json 형태가 아닌 경우
+        target_dong = ai_res['정답'].strip()
         if ai_res['정답'] == "ai 응답 json형태 미일치 오류":
+            # 드라이버 핸들 돌려 놓기
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
             time.sleep(1)
-            #3.동 검색결과 선택지 2개 이상(AI로 예측 진행) > 3.정해진 답변 형식(json)으로 답변하지 않는 경우
-            return {
-                "success": False,
-                "dong_list": dong_list_text,
-                "selected_dong": ai_res['정답'],
-                "ai_response": ai_res
-            }
-        
-        # 입력값과 예측값 일치하는 경우 > 클릭
+            #return dong_list_text[1:].split('\n'), target_dong
+            return dong_list_text, ai_res
+        print(f'동 입력값:{dong}')
+        print(f'동 예측값:{target_dong}')
+        # 예측값 클릭
         for idx, itm in enumerate(dong_list):
-            if ai_res['정답'] == itm.text.strip():
+            if target_dong == itm.text.strip():
                 print("예측값과 일치하는 항목 클릭")
                 dong_list[idx].click()
-                driver.switch_to.window(driver.window_handles[0])
                 time.sleep(1)
-                #3.동 검색결과 선택지 2개 이상(AI로 예측 진행) > 2.동 선택지에 있는 값으로 예측하는 경우
-                return {
-                    "success": True,
-                    "dong_list": dong_list_text,
-                    "selected_dong": ai_res['정답'],
-                    "ai_response": ai_res
-                }
-            
-        print(f'동 입력값:{dong}')
-        print(f'동 예측값:{ai_res["정답"]}')
-        time.sleep(1)
-
-        # 입력값과 예측값 일치하지 않는 경우 > ai 응답 오류
+                break
         if len(driver.window_handles) > 1:
-            print('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
+            print('ai 응답 오류:정확히 일치하는 값을 응답하지 않음')
             print('선택지 클릭 불가')
-            ai_res['정답'] = f'ai 응답 오류: 정확히 일치하는 값을 응답하지 않음\n예측값:{ai_res["정답"]}'
+            ai_res['정답'] = f'ai 응답 오류:정확히 일치하는 값을 응답하지 않음\n{ai_res["정답"]}'
+            # 드라이버 핸들 돌려 놓기
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
-            #3.동 검색결과 선택지 2개 이상(AI로 예측 진행) > 1.동 선택지에 없는 값으로 예측하는 경우
-            return {
-                "success": False,
-                "dong_list": dong_list_text,
-                "selected_dong": ai_res['정답'],
-                "ai_response": ai_res
-            }
+            time.sleep(1)
+            return dong_list_text[1:], ai_res
         
+        # 드라이버 핸들 돌려 놓기
+        driver.switch_to.window(driver.window_handles[0])
+        time.sleep(1)
+        #return dong_list_text[1:].split('\n'), target_dong
+        return dong_list_text[1:], ai_res
+
 def search_num(driver=None, dong=None, num=None): 
     '''
-    desc: 호수 선택. 2개 이상일 경우 LLM 이용
-    parm: driver, dong, num
-    return: JSON object with success, num_list, selected_num, and ai_response
+    desc:호수 선책. 2개 이상일 경우 LLM 이용
+    parm:drv, num
+    return: True/False, list
     '''
     
     # 주소 검색 버튼 클릭으로 새 창 띄우기
@@ -418,109 +388,73 @@ def search_num(driver=None, dong=None, num=None):
     search_element.click()
 
     # 새 창(호수 선택 창)으로 이동
-    for i in range(0, 6):
-        alert_msg = check_alert(driver=driver)
+    for i in range(0,5):
         if len(driver.window_handles) > 1:
-            print("새 창(호수 선택 창) 확인되었습니다.")
-            driver.switch_to.window(driver.window_handles[1])  # 새 창 이동    
+            print("새 창(호수 선택 창) 확인!!")
             break
-        # 호수 검색 클릭 안되는 경우
-        elif (i > 4) or alert_msg:
-            if alert_msg:
-                # 경고창 닫기
-                WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
-                alert_msg = f'[경고창]{alert_msg}'
-            else:
-                alert_msg = '확인되는 호수 팝업 창이 없습니다.'
-            # 기존 창으로 이동
-            driver.switch_to.window(driver.window_handles[0])
-            res = {
-                "정답": "",
-                "신뢰도": "",
-                "추론이유": ""
-            }
-            # 1.동 검색결과 없음(경고창 알림)
-            return {
-                "success": False,
-                "num_list": alert_msg,
-                "selected_num": "",
-                "ai_response": res
-            }
         print(f'새 창(호수 선택 창) 탐색 중..({i+1}/5초)')
-        time.sleep(1)    
+        time.sleep(1)
+    driver.switch_to.window(driver.window_handles[1]) # 새 창 이동    
+    new_drv_hnd = driver.current_window_handle
 
     # 호수 검색 결과 확인 
     time.sleep(1)
     num_list = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".tbl_list.border"))
-    ).find_elements(By.CSS_SELECTOR, 'table tbody tr a')
+    ).find_elements(By.CSS_SELECTOR, ' table tbody tr a')
     print(f'호수 출력 결과 개수: {len(num_list)}개')
-    num_1st = num_list[0].text # 클릭 시 팝업 창 꺼지기 때문에 데이터 저장해놓고 사용.
-    if len(num_list) < 2:  # 호수가 1개 나온 경우
+    num_list_text = ''
+    if len(num_list) < 2: # 호수가 1개 나온 경우
+        num_list_text = num_list[0].text
+        #print(f'{num_list_text}')
         num_list[0].click()
+        # 드라이버 핸들 돌려 놓기
         driver.switch_to.window(driver.window_handles[0])
-        ai_response = {
-            "정답": num_1st,
+        res = {
+            "정답": num_list_text,
             "신뢰도": "100%",
             "추론이유": "선택지가 1개"
         }
         time.sleep(1)
-        return {
-            "success": True,
-            "num_list": num_1st,
-            "selected_num": num_1st,
-            "ai_response": ai_response
-        }
-    else:  # 호수가 2개 이상 나온 경우
-        num_list_text = [itm.text for itm in num_list]
-        num_list_text = '\n'.join(num_list_text)
+        return num_list_text, res
+    else: # 호수가  2개 이상 나온 경우
+        for idx, itm in enumerate(num_list):
+            #print(f'{itm.text}')
+            num_list_text = f'{num_list_text}\n{itm.text}'
+        #print(num_list_text)
         ai_res = openai_api(dong=dong, num=num, gov24_dong_num=num_list_text, dong_or_num='호수')
-        ai_res['정답'] = ai_res['정답'].strip()
-
+        target_num = ai_res['정답'].strip()
         if ai_res['정답'] == "ai 응답 json형태 미일치 오류":
+            # 드라이버 핸들 돌려 놓기
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
             time.sleep(1)
-            return {
-                "success": False,
-                "num_list": num_list_text,
-                "selected_num": ai_res['정답'],
-                "ai_response": ai_res
-            }
-    
-        # 입력값과 예측값 일치하는 경우 > 클릭
+            #return dong_list_text[1:].split('\n'), target_dong
+            return num_list_text, ai_res
+        print(f'호수 입력값:{num}')
+        print(f'호수 예측값:{target_num}')
+        # 예측값 클릭
         for idx, itm in enumerate(num_list):
-            if ai_res['정답'] == itm.text.strip():
+            if target_num == itm.text.strip():
                 print("예측값과 일치하는 항목 클릭")
                 num_list[idx].click()
-                driver.switch_to.window(driver.window_handles[0])
                 time.sleep(1)
-                return {
-                    "success": True,
-                    "num_list": num_list_text,
-                    "selected_num": ai_res['정답'],
-                    "ai_response": ai_res
-                }
-                
-        print(f'호수 입력값:{num}')
-        print(f'호수 예측값:{ai_res["정답"]}')
-        time.sleep(1)
-        
-        
+                break
         if len(driver.window_handles) > 1:
-            print('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
+            print('ai 응답 오류:정확히 일치하는 값을 응답하지 않음')
             print('선택지 클릭 불가')
-            ai_res['정답'] = f'ai 응답 오류: 정확히 일치하는 값을 응답하지 않음\n예측값:{ai_res["정답"]}'
+            ai_res['정답'] = f'ai 응답 오류:정확히 일치하는 값을 응답하지 않음\n{ai_res["정답"]}'
+            # 드라이버 핸들 돌려 놓기
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
             time.sleep(1)
-            return {
-                "success": False,
-                "num_list": num_list_text,
-                "selected_num": ai_res['정답'],
-                "ai_response": ai_res
-            }
-
+            return num_list_text[1:], ai_res
+    
+        # 드라이버 핸들 돌려 놓기
+        driver.switch_to.window(driver.window_handles[0])
+        time.sleep(1)
+        return num_list_text[1:], ai_res
+    
 
 def main():
     global T_DEFAULT
@@ -539,7 +473,6 @@ def main():
     df['gov24_dong_tratget'] = ''
     df['gov24_dong_신뢰도'] = ''
     df['gov24_dong_추론이유'] = ''
-
     df['gov24_num_list'] = ''
     df['gov24_num_tratget'] = ''
     df['gov24_num_신뢰도'] = ''
@@ -568,9 +501,9 @@ def main():
         print(f"num:{num}")
         print("=" * 20,'\n') 
 
-        # if '인천광역시' in address or '경기도 평택시' in address: # 경기도 평택시 송일로5번길 37
-        #     print(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
-        #     continue  # pass 대신 continue를 사용하여 다음 행으로 이동
+        if '인천광역시' in address or '경기도 평택시' in address: # 경기도 평택시 송일로5번길 37
+            print(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
+            continue  # pass 대신 continue를 사용하여 다음 행으로 이동
         
         # 건축물대장 열람페이지 이동 및 세팅
         if index%10==0: # 로그인 연장 팝업 문제로 페이지 임시 이동
@@ -579,35 +512,115 @@ def main():
         building_register_issuance_settings(driver=driver)
         
         
-        # 주소 검색
-        result = search_address(driver=driver, address=address)
-        if result['success'] == False:
-            print(result['message'])
-            df.at[index, 'gov24_dong_list'] = result['message']
+        
+
+        if not(search_address(driver=driver, address=address)):
+            print('주소 검색결과 확인되지 않음.')
+            error_msg = '주소 검색결과 확인되지 않음.'
+            gov24_dong_list = error_msg
+            df.at[index, 'gov24_dong_list'] = gov24_dong_list
             df.to_excel(output_file_path, index=False, engine="openpyxl")
             continue
+        try:
+            gov24_dong_list, ai_res = search_dong(driver=driver, dong=dong, num=num)
+            gov24_dong_tratget = ai_res['정답']
+            gov24_dong_confidence = ai_res['신뢰도']
+            gov24_dong_reasoning = ai_res['추론이유']
+            
+            gov24_num_list, ai_res = search_num(driver=driver, dong=dong, num=num)
+            gov24_num_tratget = ai_res['정답']
+            gov24_num_confidence = ai_res['신뢰도']
+            gov24_num_reasoning = ai_res['추론이유']
 
-    
-        # 동 검색
-        result = search_dong(driver=driver, dong=dong, num=num)
-        df.at[index, 'gov24_dong_list'] = result["dong_list"]
-        df.at[index, 'gov24_dong_tratget'] = result["ai_response"]['정답']
-        df.at[index, 'gov24_dong_신뢰도'] = result["ai_response"]['신뢰도']
-        df.at[index, 'gov24_dong_추론이유'] = result["ai_response"]['추론이유']
+        except:
+            print('동 검색 결과는 경우, 호수 검색x 다음 진행')
+            continue
+            print('예외로 안들어가겎므!')
+            error_msg = '동 검색 결과가 없거나 ai 응답 에러로 확인 요망'
+            gov24_dong_list = error_msg
+            gov24_dong_tratget = error_msg
+            gov24_dong_confidence = error_msg
+            gov24_dong_reasoning = error_msg
+            
+            gov24_num_list = error_msg
+            gov24_num_tratget = error_msg
+            gov24_num_confidence = error_msg
+            gov24_num_reasoning = error_msg
 
-        # 호수 검색    
-        result = search_num(driver=driver, dong=dong, num=num)
-        df.at[index, 'gov24_num_list'] = result["num_list"]
-        df.at[index, 'gov24_num_tratget'] = result["ai_response"]['정답']
-        df.at[index, 'gov24_num_신뢰도'] = result["ai_response"]['신뢰도']
-        df.at[index, 'gov24_num_추론이유'] = result["ai_response"]['추론이유']
-        
+        df.at[index, 'gov24_dong_list'] = gov24_dong_list
+        df.at[index, 'gov24_dong_tratget'] = gov24_dong_tratget
+        df.at[index, 'gov24_dong_신뢰도'] = gov24_dong_confidence
+        df.at[index, 'gov24_dong_추론이유'] = gov24_dong_reasoning
+
+        df.at[index, 'gov24_num_list'] = gov24_num_list
+        df.at[index, 'gov24_num_tratget'] = gov24_num_tratget
+        df.at[index, 'gov24_num_신뢰도'] = gov24_num_confidence
+        df.at[index, 'gov24_num_추론이유'] = gov24_num_reasoning
         df.to_excel(output_file_path, index=False, engine="openpyxl")
 
     # 수정된 DataFrame을 엑셀 파일로 저장
     #output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
     #df.to_excel(output_file_path, index=False, engine="openpyxl")
     print(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
+
+
+''' # 아래는 테스트 부분
+    for i in range(0,10):
+        # 주소 검색
+        #search_address(driver=driver, address='서울특별시 동대문구 장한로28가길 17')
+        search_address(driver=driver, address='경기도 수원시 권선구 덕영대로1190번길 100')
+        #search_address(driver=driver, address='성미산로20')
+        # 동 검색
+        if search_dong(driver=driver, dong='717동 1501호'):
+            # 호수 검색
+            search_num(driver=driver, num='717동 1501호')
+
+    
+search_address(driver=driver, address='경기도 남양주시 별내1로 6')
+search_dong(driver=driver, dong='상가1층 137호'):
+search_num(driver=driver, num='상가1층 137호')
+# 동
+힐스테이트 별내역 101동(숙박시설(생활숙박시설) : 25577.4216)
+힐스테이트 별내역 102동(숙박시설(생활숙박시설) : 31496.3486)	
+힐스테이트 별내역 103동(숙박시설(생활숙박시설) : 27088.4654)	
+*힐스테이트 별내역 판매시설동(판매시설 : 6533.8245)
+# 호수
+137호
+
+search_address(driver=driver, address='서울특별시 구로구 디지털로26길 43')
+search_dong(driver=driver, dong='L 7층 전체')
+search_num(driver=driver, num='L 7층 전체')
+# 동
+1개
+# 호수
+L701
+
+search_address(driver=driver, address='서울특별시 구로구 가마산로 97')
+search_dong(driver=driver, dong='현대로얄아파트 4층')
+search_num(driver=driver, num='현대로얄아파트 4층')
+# 동
+1개
+# 호수
+4층 10호
+
+
+search_address(driver=driver, address='경기도 의정부시 민락로 195')
+search_dong(driver=driver, dong='H동 302')
+search_num(driver=driver, num='H동 302')
+# 동
+1개
+# 호수
+106
+
+search_address(driver=driver, address='서울특별시 금천구 가산디지털2로 169-23')
+search_dong(driver=driver, dong='기숙사 302')
+search_num(driver=driver, num='기숙사 302')
+# 동
+기숙사
+# 호수
+302
+
+    '''
 
     # 발급하고 저장하기(html, pdf)
 

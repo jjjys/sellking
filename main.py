@@ -535,15 +535,12 @@ def main():
     output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
 
     # 새로운 열을 추가하기 위해 DataFrame에 빈 열 생성
-    df['gov24_dong_list'] = ''
-    df['gov24_dong_tratget'] = ''
-    df['gov24_dong_신뢰도'] = ''
-    df['gov24_dong_추론이유'] = ''
-
-    df['gov24_num_list'] = ''
-    df['gov24_num_tratget'] = ''
-    df['gov24_num_신뢰도'] = ''
-    df['gov24_num_추론이유'] = ''
+    required_columns = ['gov24_dong_list', 'gov24_dong_tratget', 'gov24_dong_신뢰도', 'gov24_dong_추론이유',
+                        'gov24_num_list','gov24_num_tratget','gov24_num_신뢰도','gov24_num_추론이유']
+    # 각 열이 DataFrame에 없는 경우에만 추가
+    for col in required_columns:
+        if col not in df.columns:
+            df[col] = ''
 
     # 웹사이트 접속 및 로그인
     driver = driver_call()

@@ -4,6 +4,9 @@
 .sellking/
 sellking/
 
+.sellking_real_estate_agents_info_scraper/
+sellking_real_estate_agents_info_scraper/
+
 .vscode/
 
 data/

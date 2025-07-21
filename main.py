@@ -77,6 +77,8 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
     print(f'output:{completion01.choices[0].message.content}\n')
 
     result = completion01.choices[0].message.content
+
+    # ai 출력 결과 검증
     try:
         result = json.loads(result)
         if isinstance(result, dict):
@@ -87,27 +89,12 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
     except:
         print('ai 응답 json형태 미일치 오류')
         result = {
-            "정답": "ai 응답 json형태 미일치 오류",
+            "정답": "[ai 응답] json형태 미일치 오류",
             "신뢰도": "",
             "추론이유": ""
         }
         return result
-    
-'''
-def close_other_windows(driver=None):
-    # 현재 윈도우 핸들 저장
-    current_handle = driver.current_window_handle
-    # 열려 있는 모든 핸들 가져오기
-    all_handles = driver.window_handles
-    
-    for handle in all_handles:
-        if handle != current_handle:
-            driver.switch_to.window(handle)
-            driver.close()
-    
-    # 다시 현재 핸들로 전환
-    driver.switch_to.window(current_handle)
-''' 
+
 def check_alert(driver=None):
     try:
         # 경고창 확인 시도
@@ -198,10 +185,7 @@ def search_address(driver=None, address='주소'):
     desc: 주소창 선택하기 팝업에서 입력받은 주소를 선택
     return: JSON 형식의 딕셔너리 {"success": bool, "message": str}
     '''
-    false_msg = ''
-    # 현재 드라이버 핸들 저장 
-    cur_drv_hnd = driver.current_window_handle # 안정화 작업
-    new_drv_hnd = None # 새창 핸들 초기화 -> title로 찾기
+    fail_msg = ''
     
     # 주소 검색 버튼 클릭으로 새 창 띄우기
     search_element = WebDriverWait(driver, timeout=T_DEFAULT).until(
@@ -233,7 +217,7 @@ def search_address(driver=None, address='주소'):
             EC.presence_of_element_located((By.CLASS_NAME, 'address-result-list'))
         ).find_elements(By.CSS_SELECTOR, ':scope > a')
     except Exception as e:
-        false_msg = "주소 검색 결과 확인 불가"
+        fail_msg = "[주소]주소 검색 결과 확인 불가"
         print(f'검색어:{address}')
         print(''' - 검색 결과 확인 불가.
               검색 결과가 없는 경우: asdf(이상한 값 입력)
@@ -241,7 +225,7 @@ def search_address(driver=None, address='주소'):
               검색 범위가 넓은 경우: 서웉특별시''')
         driver.close()
         driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동/finally 고려
-        return {"success": False, "message": false_msg}
+        return {"success": False, "message": fail_msg}
     if len(address_list) == 1: # 주소가 1개 나온 경우
         address_list[0].click()
     elif len(address_list) > 1: # 주소가 2개 이상 나온 경우
@@ -265,15 +249,15 @@ def search_address(driver=None, address='주소'):
     
     time.sleep(1)
     if len(driver.window_handles) > 1:
-        false_msg = '행정처리기관 추가 선택 필요'
-        print(false_msg)
+        fail_msg = '[주소]행정처리기관 추가 선택 필요'
+        print(fail_msg)
         driver.close()
         driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동
-        return {"success": False, "message": false_msg}
+        return {"success": False, "message": fail_msg}
     
-    driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동
+    driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동(인터넷 환경에서 안되는 경우 있어서 안정적으로 추가)
     time.sleep(1)
-    return {"success": True, "message": false_msg}
+    return {"success": True, "message": fail_msg}
 
 def search_dong(driver=None, dong=None, num=None):
     '''
@@ -306,9 +290,9 @@ def search_dong(driver=None, dong=None, num=None):
             if alert_msg:
                 # 경고창 닫기
                 WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
-                alert_msg = f'[경고창]{alert_msg}'
+                alert_msg = f'[동 경고창]{alert_msg}'
             else:
-                alert_msg = '확인되는 동 팝업 창이 없습니다.'
+                alert_msg = '확인되는 동 경고창이 없습니다.'
             # 기존 창으로 이동
             driver.switch_to.window(driver.window_handles[0])
             res = {
@@ -323,7 +307,7 @@ def search_dong(driver=None, dong=None, num=None):
                 "selected_dong": "",
                 "ai_response": res
             }
-        print(f'새 창(동) 탐색 중..({i+1}/5초)')
+        print(f'새 창(동 선택 창) 탐색 중..({i+1}/5초)')
         time.sleep(1)
        
 
@@ -429,9 +413,9 @@ def search_num(driver=None, dong=None, num=None):
             if alert_msg:
                 # 경고창 닫기
                 WebDriverWait(driver, 10).until(EC.alert_is_present()).dismiss()
-                alert_msg = f'[경고창]{alert_msg}'
+                alert_msg = f'[호수 경고창]{alert_msg}'
             else:
-                alert_msg = '확인되는 호수 팝업 창이 없습니다.'
+                alert_msg = '확인되는 호수 경고창이 없습니다.'
             # 기존 창으로 이동
             driver.switch_to.window(driver.window_handles[0])
             res = {
@@ -521,94 +505,150 @@ def search_num(driver=None, dong=None, num=None):
                 "ai_response": ai_res
             }
 
+def get_building_register(driver=None, address='주소', dong=None, num=None):
+
+    # 기존 파일이 있는 경우 해당 파일 읽고 반환
+    file_path = f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html'
+    if os.path.exists(file_path):
+        print('\n이전 건축물대장발급한 이력이 있는 파일입니다.\n')
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+
+    # 신청하기 버튼 클릭
+    driver.find_element(By.CSS_SELECTOR, "#btn_end").click()
+
+    # 열람/발급 페이지 이동
+    if driver.current_url != 'https://plus.gov.kr/mypage/mbrAplySrvcList':
+        for _ in range(0,180):
+            print(f'열람/발급 페이지 이동 확인 중...({_+1}/180)초')
+            time.sleep(1)
+            if driver.current_url == 'https://plus.gov.kr/mypage/mbrAplySrvcList':
+                print('열람/발급 페이지 확인되었습니다.')
+                break
+    
+    # 열람/발급 문서 클릭
+    WebDriverWait(driver, timeout=T_DEFAULT).until(
+            EC.visibility_of_element_located((By.XPATH, '//*[@id="iw_container"]/div[1]/div[2]/div[5]/div[1]/div[2]/div[1]/table/tbody/tr/td[4]/span[2]/button'))
+        ).click()
+    
+
+    # 새 창에서 html 전처리 작업 후 저장
+    for _ in range(0,180):
+        print(f'열람/발급 창 확인 중...({_+1}/180)초')
+        time.sleep(1)
+        if len(driver.window_handles) > 1:
+            print(f'열람/발급 창 확인되었습니다.')
+            driver.switch_to.window(driver.window_handles[1])
+            time.sleep(1)
+            break
+    building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
+    with open(f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html', 'w', encoding='utf-8') as file:
+        file.write(building_register_html)
+    
+    # 기존 창으로 돌아가기
+    driver.close()
+    driver.switch_to.window(driver.window_handles[0])
+
+    # 반환값.
+    return building_register_html
 
 def main():
-    global T_DEFAULT
-    T_DEFAULT = 10
-    load_dotenv()  # .env 읽기
-    GOV24_ID = os.getenv("GOV24_ID")
-    GOV24_PW = os.getenv("GOV24_PW")
+    try:
+        global T_DEFAULT
+        T_DEFAULT = 10
+        load_dotenv()  # .env 읽기
+        GOV24_ID = os.getenv("GOV24_ID")
+        GOV24_PW = os.getenv("GOV24_PW")
 
-    # 매도왕 수집 데이터 읽기
-    file_path = r"C:\Users\User\Desktop\sellking\data\adress_info.xlsx"
-    df = pd.read_excel(file_path, engine="openpyxl")
-    output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
+        # 웹사이트 접속 및 로그인
+        driver = driver_call()
+        login_gov24(driver=driver,
+                    gov24_ID=GOV24_ID,
+                    gov24_PW=GOV24_PW)
 
-    # 새로운 열을 추가하기 위해 DataFrame에 빈 열 생성
-    required_columns = ['gov24_dong_list', 'gov24_dong_tratget', 'gov24_dong_신뢰도', 'gov24_dong_추론이유',
-                        'gov24_num_list','gov24_num_tratget','gov24_num_신뢰도','gov24_num_추론이유']
-    # 각 열이 DataFrame에 없는 경우에만 추가
-    for col in required_columns:
-        if col not in df.columns:
-            df[col] = ''
+        #########################################################
+        ### [ 작업을 위한 데이터 읽기 ] ############################
+        #########################################################
+        # 매도왕 수집 데이터 읽기
+        file_path = r"C:\Users\User\Desktop\sellking\data\adress_info.xlsx"
+        df = pd.read_excel(file_path, engine="openpyxl")
+        output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
 
-    # 웹사이트 접속 및 로그인
-    driver = driver_call()
-    login_gov24(driver=driver,
-                gov24_ID=GOV24_ID,
-                gov24_PW=GOV24_PW)
-    
-    # 각 행 반복
-    for index, row in df.iloc[:].iterrows():
-        # 각 행의 데이터 접근 (열 이름으로 접근 가능)
-        address = row[df.columns[0]]  # 주소
-        dong = row[df.columns[1]]     # 동
-        num = row[df.columns[2]]      # 호수
+        # 새로운 열을 추가하기 위해 DataFrame에 빈 열 생성
+        required_columns = ['gov24_dong_list', 'gov24_dong_tratget', 'gov24_dong_신뢰도', 'gov24_dong_추론이유',
+                            'gov24_num_list','gov24_num_tratget','gov24_num_신뢰도','gov24_num_추론이유']
+        # 각 열이 DataFrame에 없는 경우에만 추가
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = ''
 
-        # 주소, 동, 호수 전체 값 확인
-        print('\n'*3)
-        print('='*20)
-        print('='*20)
-        print(f"행 {index + 1}:")
-        print(f"address:{address}")
-        print(f"dong:{dong}")
-        print(f"num:{num}")
-        print("=" * 20,'\n') 
+        # 각 행 반복
+        for index, row in df.iloc[:].iterrows():
+            # 각 행의 데이터 접근 (열 이름으로 접근 가능)
+            address = row[df.columns[0]]  # 주소
+            dong = row[df.columns[1]]     # 동
+            num = row[df.columns[2]]      # 호수
 
-        # if '인천광역시' in address or '경기도 평택시' in address: # 경기도 평택시 송일로5번길 37
-        #     print(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
-        #     continue  # pass 대신 continue를 사용하여 다음 행으로 이동
+            # 주소, 동, 호수 전체 값 확인
+            print('\n'*3)
+            print('='*20)
+            print('='*20)
+            print(f"행 {index + 1}:")
+            print(f"address:{address}")
+            print(f"dong:{dong}")
+            print(f"num:{num}")
+            print("=" * 20,'\n') 
+
+            # if '인천광역시' in address or '경기도 평택시' in address: # 경기도 평택시 송일로5번길 37
+            #     print(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
+            #     continue  # pass 대신 continue를 사용하여 다음 행으로 이동
+            
+            
+            #########################################################
+            ### [ 작업 시작 ] ########################################
+            #########################################################
         
-        # 건축물대장 열람페이지 이동 및 세팅
-        if index%10==0: # 로그인 연장 팝업 문제로 페이지 임시 이동
-            time.sleep(1)
-            driver.get('https://www.gov.kr/')
-        building_register_issuance_settings(driver=driver)
-        
-        
-        # 주소 검색
-        result = search_address(driver=driver, address=address)
-        if result['success'] == False:
-            print(result['message'])
-            df.at[index, 'gov24_dong_list'] = result['message']
+            # 건축물대장 열람페이지 이동 및 세팅
+            if index%10==0: # 로그인 연장 팝업 문제로 페이지 임시 이동
+                time.sleep(1)
+                driver.get('https://www.gov.kr/')
+            building_register_issuance_settings(driver=driver)
+                    
+            # 주소 검색
+            result_address = search_address(driver=driver, address=address)
+            if result_address['success'] == False:
+                print(result_address['message'])
+                df.at[index, 'gov24_dong_list'] = result_address['message']
+                df.to_excel(output_file_path, index=False, engine="openpyxl")
+                continue
+
+            # 동 검색
+            result_dong = search_dong(driver=driver, dong=dong, num=num)
+            df.at[index, 'gov24_dong_list'] = result_dong["dong_list"]
+            df.at[index, 'gov24_dong_tratget'] = result_dong["ai_response"]['정답']
+            df.at[index, 'gov24_dong_신뢰도'] = result_dong["ai_response"]['신뢰도']
+            df.at[index, 'gov24_dong_추론이유'] = result_dong["ai_response"]['추론이유']
+
+            # 호수 검색    
+            if result_dong['success']:
+                result_num = search_num(driver=driver, dong=dong, num=num)
+                df.at[index, 'gov24_num_list'] = result_num["num_list"]
+                df.at[index, 'gov24_num_tratget'] = result_num["ai_response"]['정답']
+                df.at[index, 'gov24_num_신뢰도'] = result_num["ai_response"]['신뢰도']
+                df.at[index, 'gov24_num_추론이유'] = result_num["ai_response"]['추론이유']
+
+                # 건축물 대장 발급 신청(주소,동,호수 문제 없는 경우)
+                if result_num['success']:
+                    print('\n건축물 대장 발급 진행\n')
+                    building_register_html = get_building_register(driver=driver, address=address, dong=dong, num=num)
+            
+            # 수정된 DataFrame을 엑셀 파일로 저장
             df.to_excel(output_file_path, index=False, engine="openpyxl")
-            continue
+            print(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
 
     
-        # 동 검색
-        result = search_dong(driver=driver, dong=dong, num=num)
-        df.at[index, 'gov24_dong_list'] = result["dong_list"]
-        df.at[index, 'gov24_dong_tratget'] = result["ai_response"]['정답']
-        df.at[index, 'gov24_dong_신뢰도'] = result["ai_response"]['신뢰도']
-        df.at[index, 'gov24_dong_추론이유'] = result["ai_response"]['추론이유']
-
-        # 호수 검색    
-        result = search_num(driver=driver, dong=dong, num=num)
-        df.at[index, 'gov24_num_list'] = result["num_list"]
-        df.at[index, 'gov24_num_tratget'] = result["ai_response"]['정답']
-        df.at[index, 'gov24_num_신뢰도'] = result["ai_response"]['신뢰도']
-        df.at[index, 'gov24_num_추론이유'] = result["ai_response"]['추론이유']
-        
-        df.to_excel(output_file_path, index=False, engine="openpyxl")
-
-    # 수정된 DataFrame을 엑셀 파일로 저장
-    #output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
-    #df.to_excel(output_file_path, index=False, engine="openpyxl")
-    print(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
-
-    # 발급하고 저장하기(html, pdf)
-
-    #driver.quit()
+    finally:
+        driver.quit()
 
 if __name__ == '__main__':
     main()

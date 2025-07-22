@@ -9,6 +9,7 @@ sellking_real_estate_agents_info_scraper/
 
 .vscode/
 
+utils/__pycache__/
 __pycache__/
 *.pyc
 

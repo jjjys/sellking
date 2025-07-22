@@ -9,6 +9,9 @@ sellking_real_estate_agents_info_scraper/
 
 .vscode/
 
+__pycache__/
+*.pyc
+
 data/
 data/captcha/
 data/1차 테스트 결과/

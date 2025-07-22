@@ -160,9 +160,5 @@ search_num(driver=driver, num='기숙사 302')
 
     '''
 
-    # 발급하고 저장하(html, pdf)
-
-    #driver.quit()
-
 if __name__ == '__main__':
     main()

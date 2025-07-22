@@ -104,8 +104,99 @@ def check_alert(driver=None):
     except NoAlertPresentException:
         print("경고창이 없습니다.")
         return False
-    
+
 def building_register_issuance_settings(driver=None):
+    '''
+    건축물대장 발급 전 세팅.
+    1.발급/열람
+    2.집합건물
+    3.전유부
+    '''
+    try:
+        # Navigate to issuance page
+        driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
+        time.sleep(2)  # Allow page to load
+
+        # Click "발급하기" button
+        try:
+            issue_button = WebDriverWait(driver, timeout=10).until(
+                EC.element_to_be_clickable((By.LINK_TEXT, '발급하기'))
+            )
+            driver.execute_script("arguments[0].click();", issue_button)  # JavaScript click to avoid interactability issues
+        except Exception as e:
+            print(f"Error clicking '발급하기': {str(e)}")
+            raise
+
+        # Handle potential login prompt
+        try:
+            driver.find_element(By.LINK_TEXT, '회원 신청하기').click()
+            time.sleep(1)
+        except:
+            pass  # Ignore if not present
+
+        # Select "건축물대장(열람)"
+        for _ in range(3):
+            try:
+                issue_open_state = WebDriverWait(driver, timeout=10).until(
+                    EC.visibility_of_element_located((By.CSS_SELECTOR, 'li.active.visible'))
+                )
+                if issue_open_state.text != '건축물대장(열람)':
+                    print('Switching to 열람...')
+                    WebDriverWait(driver, timeout=10).until(
+                        EC.element_to_be_clickable((By.LINK_TEXT, '건축물대장(열람)'))
+                    ).click()
+                    time.sleep(1)
+                else:
+                    print('Already in 열람 state')
+                    break
+            except Exception as e:
+                print(f"Error selecting 열람: {str(e)}")
+                raise
+
+        # Scroll to address search button
+        try:
+            search_element = WebDriverWait(driver, timeout=10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, '#주소검색'))
+            )
+            driver.execute_script("arguments[0].scrollIntoView(true);", search_element)
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error finding address search button: {str(e)}")
+            raise
+
+        # Select 집합건물 and 전유부
+        set_building = driver.find_element(By.CSS_SELECTOR, '#main > div:nth-child(1) > div:nth-child(3) > div > div:nth-child(2)')
+        junyuebu = driver.find_element(By.CSS_SELECTOR, '#dis_2 > div > div:nth-child(3) > label')
+        try:
+            # set_building = WebDriverWait(driver, timeout=10).until(
+            #     EC.element_to_be_clickable((By.CSS_SELECTOR, '#main > div:nth-child(1) > div:nth-child(3) > div > div:nth-child(2)'))
+            # )
+            if '집합(아파트,연립주택 등)' in set_building.text:
+                print('Selecting 집합건물...')
+                set_building.click()
+                #driver.execute_script("arguments[0].click();", set_building)
+            else:
+                print('집합건물 not found in expected element')
+
+            # junyuebu = WebDriverWait(driver, timeout=10).until(
+            #     EC.element_to_be_clickable((By.CSS_SELECTOR, '#dis_2 > div > div:nth-child(3) > label'))
+            # )
+            if '전유부' in junyuebu.text:
+                print('Selecting 전유부...')
+                junyuebu.click()
+                #driver.execute_script("arguments[0].click();", junyuebu)
+            else:
+                print('전유부 not found in expected element')
+        except Exception as e:
+            print(f"Error selecting 집합건물 or 전유부: {str(e)}")
+            raise
+
+        return True
+    except Exception as e:
+        print(f"Error in building_register_issuance_settings: {str(e)}")
+        return False
+    
+def building_register_issuance_settings_(driver=None):
     '''
     건축물대장 발급 전 세팅.
     1.발급/열람
@@ -542,6 +633,7 @@ def get_building_register(driver=None, address='주소', dong=None, num=None):
             time.sleep(1)
             break
     building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
+    building_register_html = f"<html><head></head><body>{building_register_html}</body></html>"
     with open(f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html', 'w', encoding='utf-8') as file:
         file.write(building_register_html)
     
@@ -645,10 +737,13 @@ def main():
             # 수정된 DataFrame을 엑셀 파일로 저장
             df.to_excel(output_file_path, index=False, engine="openpyxl")
             print(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
-
+    except:
+        print("main error")
     
     finally:
         driver.quit()
+
+T_DEFAULT = 10 # 전역변수 대기 시간
 
 if __name__ == '__main__':
     main()

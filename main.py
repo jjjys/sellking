@@ -85,8 +85,9 @@ def scrape_hrefs(driver, url, output_file=None):
                     # Check if new li elements have loaded
                     current_count = len(li_elements)
                 if current_count == last_count:
-                    href_pattern = r'href=["\'](.*?)["\']'
-                    hrefs_li_contained_html = re.findall(href_pattern, li_contained_html)
+                    # 최대 4000개 링크 테스트
+                    #href_pattern = r'href=["\'](.*?)["\']'
+                    #hrefs_li_contained_html = re.findall(href_pattern, li_contained_html)
                     print('list elements are no longer found')
                     break  # Exit loop if no new elements are loaded
             last_count = current_count
@@ -98,7 +99,7 @@ def scrape_hrefs(driver, url, output_file=None):
                 try:
                     a_tag = li.find_element(By.TAG_NAME, "a")
                     href = a_tag.get_attribute("href")
-                    if href and href not in hrefs:  # Avoid duplicates
+                    if href not in hrefs:  # Avoid duplicates
                         hrefs.append(href)
 
                         # Save hrefs to Excel
@@ -223,81 +224,64 @@ def find_email(string1, string2):
     # 둘 다 없으면 None 반환
     return None
 
+def main():
+    try:
+        # 키워드(네이버 블로그 검색 키워드) 설정
+        keyword = '상가중개법인'#'공인중개사'
+        file_path = rf"real_estate_agents_info_{keyword}.xlsx"
 
-if __name__ == '__main__': 
-    
-    driver = driver_call()
-
-    ### [ 블로그 링크 추출 ] ###
-    # # 키워드:공인중개사
-    keyword = '공인중개사'
-    url = f"https://m.blog.naver.com/SectionBlogSearch.naver?orderType=sim&pageAccess=direct&periodType=all&searchValue={keyword}"
-    #url = f"https://m.blog.naver.com/SectionBlogSearch.naver?orderType=sim&pageAccess=tab&periodType=all&searchValue={keyword}"
-    # # 키워드:상가중개법인
-    #url = "https://m.blog.naver.com/SectionBlogSearch.naver?orderType=sim&pageAccess=direct&periodType=all&searchValue=%EC%83%81%EA%B0%80%EC%A4%91%EA%B0%9C%EB%B2%95%EC%9D%B8"
-    file_path = rf"real_estate_agents_info_{keyword}.xlsx"
-    #file_path = rf"real_estate_agents_info_{keyword}.xlsx"
-    scrape_hrefs(driver,url,output_file=file_path)
-    #input('종료:')
-    ### [ 블로그 내부 정보 추출(이메일 정보 포함) ] ###
-    df = pd.read_excel(file_path, engine="openpyxl")
-
-    # 열 추가를 위한 빈 df 생성
-    # # 필요한 열 목록
-    required_columns = ['블로그 이름', '소개', '사업자 정보', '이메일(추출)']
-    # 각 열이 DataFrame에 없는 경우에만 추가
-    for col in required_columns:
-        if col not in df.columns:
-            print(f"{col}열이 없어서 추가.")
-            df[col] = ''
-
-    for index, row in df.iloc[:].iterrows():
-        # 각 행의 데이터 접근 (열 이름으로 접근 가능)
-        url = row[df.columns[0]]  # url
+        driver = driver_call()
+        url = f"https://m.blog.naver.com/SectionBlogSearch.naver?orderType=sim&pageAccess=direct&periodType=all&searchValue={keyword}"
+        #url = f"https://m.blog.naver.com/SectionBlogSearch.naver?orderType=sim&pageAccess=tab&periodType=all&searchValue={keyword}"
         
-        # 이전에 했단 행은 넘어감.
-        if not(pd.isna(row[df.columns[1]]) or row[df.columns[1]].strip() == ''):
-            print(f"값 존재:{row[df.columns[1]]}\n다음 행({index+2}) 진행\n\n")
-            continue
-
-        # 주소, 동, 호수 전체 값 확인
-        print('\n'*3)
-        print('='*20)
-        print('='*20)
-        print(f"행 {index + 1}:")
-        print(f"url:{url}")
-        print("=" * 20,'\n') 
-        result = scrape_real_estate_agents(driver, url)
-        df.at[index, '블로그 이름'] = result['블로그 이름']
-        df.at[index, '소개'] = result['소개']
-        df.at[index, '사업자 정보'] = result['사업자 정보']
-        df.at[index, '이메일(추출)'] = find_email(result['사업자 정보'], result['소개'])
-        df.to_excel(file_path, index=False, engine="openpyxl")
+        scrape_hrefs(driver,url,output_file=file_path)
         
-    driver.quit()
-    '''
-    ######################################################
-    ######################################################
-    1.수집한 url로 > 블로그 이름(h2 > a.text) > 소개글 > 사업자 정보 확인 > 메일 정보 추출
-    https://m.blog.naver.com/PostList.naver?blogId=jjangkjkok2&tab=1&trackingCode=blog_search_mobile
-    https://m.blog.naver.com/Business.naver?blogId=jjangkjkok2
+        ### [ 블로그 내부 정보 추출(이메일 정보 포함) ] ###
+        df = pd.read_excel(file_path, engine="openpyxl")
 
-    url.replace('PostList','Business').split('&')[0]
-    result = transform_url(url)
-    사업자 정보 없는 경우 > 소개글 확인 및 저장 > 정규식으로 이메일 추출
+        # 열 추가를 위한 빈 df 생성
+        # # 필요한 열 목록
+        required_columns = ['블로그 링크', '블로그 이름', '소개', '사업자 정보', '이메일(추출)']
+        # 각 열이 DataFrame에 없는 경우에만 추가
+        for col in required_columns:
+            if col not in df.columns:
+                print(f"{col}열이 없어서 추가.")
+                df[col] = ''
 
-    1.2.수집된 이메일 중복 제거. > 
+        for index, row in df.iloc[:].iterrows():
+            # 각 행의 데이터 접근 (열 이름으로 접근 가능)
+            url = row[df.columns[0]]  # url
+            
+            # 이전에 했단 행은 넘어감.
+            if not(pd.isna(row[df.columns[1]]) or row[df.columns[1]].strip() == ''):
+                print(f"값 존재:{row[df.columns[1]]}\n다음 행({index+2}) 진행\n\n")
+                continue
 
-    2.구글 계정으로 SMTP 보내는 방법 ㄱㄱ
-    이메일 주소, 제목, 내용
-    # https://kincoding.com/entry/Google-Gmail-SMTP-%EC%82%AC%EC%9A%A9%EC%9D%84-%EC%9C%84%ED%95%9C-%EC%84%B8%ED%8C%85-2025%EB%85%84-%EB%B2%84%EC%A0%84
-
+            # 주소, 동, 호수 전체 값 확인
+            print('\n'*3)
+            print('='*20)
+            print('='*20)
+            print(f"행 {index + 1}:")
+            print(f"url:{url}")
+            print("=" * 20,'\n') 
+            result = scrape_real_estate_agents(driver, url)
+            df.at[index, '블로그 이름'] = result['블로그 이름']
+            df.at[index, '소개'] = result['소개']
+            df.at[index, '사업자 정보'] = result['사업자 정보']
+            df.at[index, '이메일(추출)'] = find_email(result['사업자 정보'], result['소개'])
+            df.to_excel(file_path, index=False, engine="openpyxl")
+    finally:
+        driver.quit()
+      
+    # # 구글 이메일 전송 테스트
+    # # 참고: https://kincoding.com/entry/Google-Gmail-SMTP-%EC%82%AC%EC%9A%A9%EC%9D%84-%EC%9C%84%ED%95%9C-%EC%84%B8%ED%8C%85-2025%EB%85%84-%EB%B2%84%EC%A0%84
+    # sender_email = "realestate250625@gmail.com"  # 발신자 Gmail 주소
+    # app_password = ""     # Google에서 생성한 App Password -> 수정함.
+    # receiver_email = "realestate250625@gmail.com"  # 수신자 이메일 주소
+    # subject = "테스트 이메일"  # 이메일 제목
+    # body = "이것은 Python을 사용한 테스트 이메일입니다."  # 이메일 본문
+    # send_email(sender_email, app_password, receiver_email, subject, body)
     
-    sender_email = "realestate250625@gmail.com"  # 발신자 Gmail 주소
-    app_password = "rbdc odlu sjkf kxxn"     # Google에서 생성한 App Password
-    receiver_email = "realestate250625@gmail.com"  # 수신자 이메일 주소
-    subject = "테스트 이메일"  # 이메일 제목
-    body = "이것은 Python을 사용한 테스트 이메일입니다."  # 이메일 본문
-
-    send_email(sender_email, app_password, receiver_email, subject, body)
-    '''
+    
+if __name__ == '__main__':
+    main() 

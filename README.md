@@ -1,3 +1,16 @@
+
+
+
+
+## 실행 방법
+uvicorn api:app --reload
+python -m http.server 8080
+
+## 환경
+python3.8
+python3.10
+패키지 - requirements.txt 참조
+
 #### 로그인 과정 캡챠 처리 방식
 1.캡챠 이미지 아스키 아트로 변환
 2.CLI 환경에서 캡챠 이미지 출력

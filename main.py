@@ -662,9 +662,9 @@ def main():
         ### [ 작업을 위한 데이터 읽기 ] ############################
         #########################################################
         # 매도왕 수집 데이터 읽기
-        file_path = r"C:\Users\User\Desktop\sellking\data\adress_info.xlsx"
+        file_path = r"data\adress_info.xlsx"
         df = pd.read_excel(file_path, engine="openpyxl")
-        output_file_path = r"C:\Users\User\Desktop\sellking\data\adress_info_updated.xlsx"
+        output_file_path = r"data\adress_info_updated.xlsx"
 
         # 새로운 열을 추가하기 위해 DataFrame에 빈 열 생성
         required_columns = ['gov24_dong_list', 'gov24_dong_tratget', 'gov24_dong_신뢰도', 'gov24_dong_추론이유',

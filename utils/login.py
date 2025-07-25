@@ -12,7 +12,7 @@ import numpy as np
 
 def captcha_img_save(driver=None):
     # 저장할 디렉토리 경로
-    save_dir = r"C:\Users\User\Desktop\sellking\data\captcha"
+    save_dir = r"data\captcha"
 
     # 현재 시간을 기반으로 파일명 생성 (예: captcha_20250702_135500.png)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

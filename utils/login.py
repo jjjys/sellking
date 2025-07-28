@@ -8,7 +8,32 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from PIL import Image
 import numpy as np
+import google.generativeai as genai
+import base64
 
+def captcha_solve_with_gemini(image_path):
+    try:
+        
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        genai.configure(api_key=GEMINI_API_KEY)
+
+        # 이미지 파일 읽기 및 Base64 인코딩
+        with open(image_path, "rb") as image_file:
+            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        #model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        response = model.generate_content([
+            "이 이미지에서 보이는 숫자만 답변해줘.",
+            {"inline_data": {"mime_type": "image/jpeg", "data": image_data}}
+        ])
+        
+        print("캡챠 분석 결과:")
+        print(response.text)
+        return response.text
+    except Exception as e:
+        print(f"캡챠 분석 중 오류 발생: {e}")
 
 def captcha_img_save(driver=None):
     # 저장할 디렉토리 경로
@@ -88,17 +113,25 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
 
         # 캡챠 이미지 저장
         image_path = captcha_img_save(driver=driver)
+        pred_captcha = captcha_solve_with_gemini(image_path)
         
 
         # 캡챠 이미지 ASCII Art로 출력
         image_to_ascii(image_path)
 
         # 캡챠 값 입력
-        captcha_attempt = input('캡챠 입력 후 엔터:')
-        try:
-            driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(captcha_attempt)
-        except:
-            driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(captcha_attempt) # 위 코드에서 태그 변경
+        print("아래 예측값이 맞을 경우 그냥 엔터 입력")
+        captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
+        if captcha_attempt == '': # 입력값 없음
+            try:
+                driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
+            except:
+                driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
+        else:
+            try:
+                driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(captcha_attempt)
+            except:
+                driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(captcha_attempt) # 위 코드에서 태그 변경
         
         login_pwd_url_1 = 'https://plus.gov.kr/login/loginIdPwdTo'
         login_pwd_url_2 = 'https://www.gov.kr/nlogin/loginByPswd'

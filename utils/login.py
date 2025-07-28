@@ -121,7 +121,8 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
 
         # 캡챠 값 입력
         print("아래 예측값이 맞을 경우 그냥 엔터 입력")
-        captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
+        #captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
+        captcha_attempt = ''
         if captcha_attempt == '': # 입력값 없음
             try:
                 driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)

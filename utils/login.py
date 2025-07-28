@@ -114,13 +114,14 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
         # 캡챠 이미지 저장
         image_path = captcha_img_save(driver=driver)
         pred_captcha = captcha_solve_with_gemini(image_path)
+        print(f"GEMINI 캡챠 예측값:{pred_captcha}")
         
 
         # 캡챠 이미지 ASCII Art로 출력
         image_to_ascii(image_path)
 
         # 캡챠 값 입력
-        print("아래 예측값이 맞을 경우 그냥 엔터 입력")
+        #print("아래 예측값이 맞을 경우 그냥 엔터 입력")
         #captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
         captcha_attempt = ''
         if captcha_attempt == '': # 입력값 없음

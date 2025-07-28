@@ -4,7 +4,9 @@
 
 ## 실행 방법
 uvicorn api:app --reload
+http://127.0.0.1:8000/docs#
 python -m http.server 8080
+http://127.0.0.1:8080/form.html
 
 ## 환경
 python3.8

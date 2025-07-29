@@ -11,7 +11,7 @@ from openai import OpenAI
 
 import pandas as pd
 from utils.driver_call import driver_call
-from utils.login import login_gov24
+from utils.login import login_gov24, login_status_gov24
 
 
 def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
@@ -113,6 +113,10 @@ def building_register_issuance_settings(driver=None):
     3.전유부
     '''
     try:
+        # 로그인 상태 체크 후 필요 시 로그인
+        if not login_status_gov24(driver):
+            login_gov24(driver)
+
         # Navigate to issuance page
         driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
         time.sleep(2)  # Allow page to load
@@ -559,6 +563,7 @@ def get_building_register(driver=None, address='주소', dong=None, num=None):
             break
     building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
     building_register_html = f"<html><head></head><body>{building_register_html}</body></html>"
+    building_register_html = building_register_html.replace('style="background : url(/img/confirm/bgtest04.gif)"','')
     with open(f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html', 'w', encoding='utf-8') as file:
         file.write(building_register_html)
     

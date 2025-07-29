@@ -166,6 +166,28 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
         print('로그인 시도 중 에러 발생!')
         return False
 
+def login_status_gov24(driver):
+    try:
+        cur_url = driver.current_url
+        driver.get('https://plus.gov.kr/')
+        WebDriverWait(driver, timeout=10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, '#iw_header > div.header-in > div > div.header-top > div > div.bottom > div.header-search > button'))
+                )
+        time.sleep(1)
+        if '로그아웃' in driver.find_element(By.CSS_SELECTOR, "div.log-after.on").text:
+            print('현재 상태:로그인')
+            driver.get(cur_url)
+            return True
+        else:
+            print('현재 상태:로그아웃')
+            driver.get(cur_url)
+            return False
+    except Exception as e:
+        print('로그인 상태 체크 에러\n{e}')
+        return False
+
+    
+
 if __name__ == '__main__': 
     
     load_dotenv()  # .env 읽기

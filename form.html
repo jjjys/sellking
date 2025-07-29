@@ -1,65 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Building Register Request</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건축물대장 요청</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            min-height: 50px;
+            text-align: center;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        #response-iframe {
+            width: 100%;
+            min-height: 400px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        #download-pdf {
+            display: none;
+            background-color: #28a745;
+            margin-top: 10px;
+            width: 100%;
+        }
+        #download-pdf:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-    <h1>Request Building Register</h1>
-    <form id="registerForm">
-        <label for="address">Address:</label>
-        <input type="text" id="address" name="address" value="경기도 안양시 만안구 삼봉로 61"><br><br>
-        <label for="dong">Dong:</label>
-        <input type="text" id="dong" name="dong" value="103"><br><br>
-        <label for="num">Ho:</label>
-        <input type="text" id="num" name="num" value="1502"><br><br>
-        <label for="output_format">Output Format:</label>
+    <h1>건축물대장 요청</h1>
+    <form id="building-register-form">
+        <label for="address">주소:</label>
+        <input type="text" id="address" name="address" required>
+
+        <label for="dong">동:</label>
+        <input type="text" id="dong" name="dong">
+
+        <label for="num">호:</label>
+        <input type="text" id="num" name="num">
+
+        <label for="output_format">출력 형식:</label>
         <select id="output_format" name="output_format">
             <option value="html">HTML</option>
             <option value="pdf">PDF</option>
-        </select><br><br>
-        <button type="submit">Submit</button>
+        </select>
+
+        <label for="api_token">API 토큰:</label>
+        <input type="text" id="api_token" name="api_token" required placeholder="API 토큰을 입력하세요">
+
+        <button type="submit">제출</button>
     </form>
-    <h2>Response</h2>
-    <iframe id="response" style="width:100%;height:500px;"></iframe>
+
+    <h2>응답</h2>
+    <div id="response">여기에 응답이 표시됩니다.</div>
+    <iframe id="response-iframe" style="display: none;"></iframe>
+    <button id="download-pdf">PDF로 다운로드</button>
 
     <script>
-        document.getElementById("registerForm").addEventListener("submit", async (event) => {
+        document.getElementById('building-register-form').addEventListener('submit', async function(event) {
             event.preventDefault();
+
             const formData = {
-                address: document.getElementById("address").value,
-                dong: document.getElementById("dong").value,
-                num: document.getElementById("num").value,
-                output_format: document.getElementById("output_format").value
+                address: document.getElementById('address').value,
+                dong: document.getElementById('dong').value || null,
+                num: document.getElementById('num').value || null,
+                output_format: document.getElementById('output_format').value
             };
+            const apiToken = document.getElementById('api_token').value;
+
+            const responseDiv = document.getElementById('response');
+            const responseIframe = document.getElementById('response-iframe');
+            const downloadButton = document.getElementById('download-pdf');
+
+            responseDiv.innerHTML = '처리 중...';
+            responseIframe.style.display = 'none';
+            downloadButton.style.display = 'none';
+
             try {
-                const response = await fetch("http://127.0.0.1:8000/get_building_register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                const response = await fetch('http://localhost:8000/get_building_register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiToken}`
+                    },
                     body: JSON.stringify(formData)
                 });
-                if (response.ok) {
-                    if (formData.output_format === "html") {
-                        const htmlContent = await response.text();
-                        const iframe = document.getElementById("response");
-                        iframe.contentDocument.open();
-                        iframe.contentDocument.write(htmlContent);
-                        iframe.contentDocument.close();
-                    } else {
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        window.open(url, "_blank");
-                    }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP 에러! 상태: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    const htmlContent = await response.text();
+                    responseDiv.innerHTML = '건축물대장이 성공적으로 로드되었습니다.';
+                    responseIframe.style.display = 'block';
+                    responseIframe.contentDocument.open();
+                    responseIframe.contentDocument.write(htmlContent);
+                    responseIframe.contentDocument.close();
+                    downloadButton.style.display = 'block';
+
+                    // PDF 다운로드 처리
+                    downloadButton.onclick = function() {
+                        const element = responseIframe.contentDocument.documentElement;
+                        const opt = {
+                            margin: 1,
+                            filename: `건축물대장_${formData.address}_${formData.dong || ''}_${formData.num || ''}.pdf`,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2 },
+                            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                        };
+                        html2pdf().from(element).set(opt).save();
+                    };
                 } else {
-                    const error = await response.json();
-                    document.getElementById("response").contentDocument.open();
-                    document.getElementById("response").contentDocument.write(`<pre>Error: ${JSON.stringify(error, null, 2)}</pre>`);
-                    document.getElementById("response").contentDocument.close();
+                    throw new Error(`예상치 못한 응답 형식: ${contentType}`);
                 }
             } catch (error) {
-                document.getElementById("response").contentDocument.open();
-                document.getElementById("response").contentDocument.write(`<pre>Error: ${error.message}</pre>`);
-                document.getElementById("response").contentDocument.close();
+                responseDiv.innerHTML = `<p class="error">에러: ${
+                    error.message.includes("Invalid or missing token") ? "잘못된 또는 누락된 토큰입니다." :
+                    error.message.includes("501") ? "PDF 출력은 현재 지원되지 않습니다. HTML로 시도해 보세요." :
+                    error.message
+                }</p>`;
             }
         });
     </script>

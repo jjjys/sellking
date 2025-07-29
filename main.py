@@ -535,10 +535,10 @@ def get_building_register(driver=None, address='주소', dong=None, num=None):
 
     # 열람/발급 페이지 이동
     if driver.current_url != 'https://plus.gov.kr/mypage/mbrAplySrvcList':
-        for _ in range(0,180):
-            print(f'열람/발급 페이지 이동 확인 중...({_+1}/180)초')
+        for _ in range(0,60):
+            print(f'열람/발급 페이지 이동 확인 중...({_+1}/60)초. 현재 페이지:{driver.current_url}')
             time.sleep(1)
-            if driver.current_url == 'https://plus.gov.kr/mypage/mbrAplySrvcList':
+            if 'https://plus.gov.kr/mypage/mbrAplySrvcList' in driver.current_url:
                 print('열람/발급 페이지 확인되었습니다.')
                 break
     

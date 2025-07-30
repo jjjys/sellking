@@ -3,13 +3,13 @@
 
 
 ## 실행 방법(배포)
-uvicorn api_01:app --host 0.0.0.0 --port 8000
-npx http-server -p 8080
+uvicorn api:app --host 0.0.0.0 --port 8000
+npx http-server ./public -p 8080
 
 ## 실행 방법(테스트)
 uvicorn api:app --reload
 http://127.0.0.1:8000/docs#
-python -m http.server 8080
+python -m http.server 8080 --directory ./public
 http://127.0.0.1:8080/form.html
 
 ## 환경

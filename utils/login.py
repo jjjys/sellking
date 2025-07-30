@@ -176,14 +176,12 @@ def login_status_gov24(driver):
         time.sleep(1)
         if '로그아웃' in driver.find_element(By.CSS_SELECTOR, "div.log-after.on").text:
             print('현재 상태:로그인')
-            driver.get(cur_url)
             return True
         else:
             print('현재 상태:로그아웃')
-            driver.get(cur_url)
             return False
     except Exception as e:
-        print('로그인 상태 체크 에러\n{e}')
+        print(f'로그인 상태 체크 에러\n{e}')
         return False
 
     

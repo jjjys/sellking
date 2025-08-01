@@ -15,13 +15,12 @@ def get_chrome_options():
     options.add_argument('--incognito')
     options.add_argument("--window-size=1920,1080")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")  # 일반 Chrome UA
-    options.add_argument('--no-sandbox')  # Recommended for server environments
-    options.add_argument('--disable-dev-shm-usage')  # Prevent memory issues
-    options.add_argument('--headless')  # 예: 헤드리스 모드
-    # 필요 시 추가 옵션
-    #options.add_argument('--ignore-certificate-errors')
-    #options.add_argument('--no-sandbox')  # 서버 환경에서 권장
-    #options.add_argument('--disable-dev-shm-usage')  # 메모리 문제 방지
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument('--headless')
+    options.binary_location = "/usr/bin/google-chrome"  # Docker에서 Chrome 경로
     
     return options
 

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  python-app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    networks:
+      - app-network
+    command: python api.py
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "start"
+      - "python-app"
+      - "--config"
+      - "/etc/ngrok.yml"
+    env_file:
+      - .env
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4040:4040
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - python-app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+*.log
+*.csv
+*.json
+*.zip
+venv/
+test-venv/
+*.md

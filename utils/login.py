@@ -37,7 +37,8 @@ def captcha_solve_with_gemini(image_path):
 
 def captcha_img_save(driver=None):
     # 저장할 디렉토리 경로
-    save_dir = r"data\captcha"
+    save_dir = os.path.join("data", "captcha")
+    os.makedirs(save_dir, exist_ok=True) # 디렉토리가 존재하지 않으면 생성
 
     # 현재 시간을 기반으로 파일명 생성 (예: captcha_20250702_135500.png)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -126,6 +127,7 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
         if captcha_attempt == '': # 입력값 없음
             try:
                 driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
+                captcha_attempt = pred_captcha
             except:
                 driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
         else:
@@ -155,7 +157,6 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
                 os.rename(image_path, img_rename)
                 break
             
-
         # 로그인 후 화면 이동이 안되면 로그인 실패
         if driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2:
             print('로그인 실패!')
@@ -168,7 +169,6 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
 
 def login_status_gov24(driver):
     try:
-        cur_url = driver.current_url
         driver.get('https://plus.gov.kr/')
         WebDriverWait(driver, timeout=10).until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, '#iw_header > div.header-in > div > div.header-top > div > div.bottom > div.header-search > button'))

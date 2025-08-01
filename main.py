@@ -14,6 +14,21 @@ from utils.driver_call import driver_call
 from utils.login import login_gov24, login_status_gov24
 
 
+def debug_check(driver): # 스크린샷, 코드 저장
+    
+    # docker run -it sellking-python-app bash
+    
+    # 컨테이너 id 확인
+    # docker ps
+
+    # 스크린샷, 코드 확인
+    # docker cp 773dcf75d203:/app/debug_screenshot.png C:\Users\user\Desktop\sellking\.debug\debug_screenshot.png
+    # docker cp 773dcf75d203:/app/page_source.html C:\Users\user\Desktop\sellking\.debug\page_source.html
+    
+    driver.save_screenshot("/app/debug_screenshot.png")
+    with open("/app/page_source.html", "w", encoding="utf-8") as f:
+        f.write(driver.page_source)
+
 def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
     '''
     설명:
@@ -120,6 +135,7 @@ def building_register_issuance_settings(driver=None):
         # Navigate to issuance page
         driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
         time.sleep(2)  # Allow page to load
+        print('발급 페이지 이동 완료')
 
         # Click "발급하기" button
         try:
@@ -127,32 +143,42 @@ def building_register_issuance_settings(driver=None):
                 EC.element_to_be_clickable((By.LINK_TEXT, '발급하기'))
             )
             driver.execute_script("arguments[0].click();", issue_button)  # JavaScript click to avoid interactability issues
+            print('발급하기 버튼 클릭')
         except Exception as e:
             print(f"Error clicking '발급하기': {str(e)}")
             raise
 
-        # Handle potential login prompt
+        # 간혹 나오는 화면 처리.
         try:
-            driver.find_element(By.LINK_TEXT, '회원 신청하기').click()
-            time.sleep(1)
-        except:
-            pass  # Ignore if not present
+            issue_button = WebDriverWait(driver, timeout=10).until(
+                EC.element_to_be_clickable((By.LINK_TEXT, '회원 신청하기'))
+            )
+            driver.execute_script("arguments[0].click();", issue_button)
+            print('회원 신청하기 버튼 클릭')
+        except Exception as e:
+            print(f"Error clicking '회원 신청하기 버튼': {str(e)}")
 
         # Select "건축물대장(열람)"
-        for _ in range(3):
+        for _ in range(10):
             try:
                 issue_open_state = WebDriverWait(driver, timeout=10).until(
                     EC.visibility_of_element_located((By.CSS_SELECTOR, 'li.active.visible'))
                 )
                 if issue_open_state.text != '건축물대장(열람)':
-                    print('Switching to 열람...')
+                    print(f'건축물대장(열람)으로 전환 중...({_+1}/10)')
                     WebDriverWait(driver, timeout=10).until(
-                        EC.element_to_be_clickable((By.LINK_TEXT, '건축물대장(열람)'))
-                    ).click()
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, ".mw_sel_list li.visible"))
+                    )
+                    chk_list = driver.find_elements(By.CSS_SELECTOR, ".mw_sel_list li.visible")
+                    for idx, elem in enumerate(chk_list):
+                        if elem.text=='건축물대장(열람)':
+                            elem.click()
+                            break
                     time.sleep(1)
                 else:
                     print('Already in 열람 state')
                     break
+
             except Exception as e:
                 print(f"Error selecting 열람: {str(e)}")
                 raise
@@ -172,9 +198,6 @@ def building_register_issuance_settings(driver=None):
         set_building = driver.find_element(By.CSS_SELECTOR, '#main > div:nth-child(1) > div:nth-child(3) > div > div:nth-child(2)')
         junyuebu = driver.find_element(By.CSS_SELECTOR, '#dis_2 > div > div:nth-child(3) > label')
         try:
-            # set_building = WebDriverWait(driver, timeout=10).until(
-            #     EC.element_to_be_clickable((By.CSS_SELECTOR, '#main > div:nth-child(1) > div:nth-child(3) > div > div:nth-child(2)'))
-            # )
             if '집합(아파트,연립주택 등)' in set_building.text:
                 print('Selecting 집합건물...')
                 set_building.click()
@@ -182,9 +205,6 @@ def building_register_issuance_settings(driver=None):
             else:
                 print('집합건물 not found in expected element')
 
-            # junyuebu = WebDriverWait(driver, timeout=10).until(
-            #     EC.element_to_be_clickable((By.CSS_SELECTOR, '#dis_2 > div > div:nth-child(3) > label'))
-            # )
             if '전유부' in junyuebu.text:
                 print('Selecting 전유부...')
                 junyuebu.click()
@@ -526,9 +546,13 @@ def search_num(driver=None, dong=None, num=None):
             }
 
 def get_building_register(driver=None, address='주소', dong=None, num=None):
+    # 저장할 디렉토리 경로
+    save_dir = os.path.join("data", "building_registers")
+    os.makedirs(save_dir, exist_ok=True)  # 디렉토리가 없으면 생성
 
     # 기존 파일이 있는 경우 해당 파일 읽고 반환
-    file_path = f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html'
+    file_name = f"건축물대장_{address}_{dong}_{num}.html"
+    file_path = os.path.join("data", "building_registers", file_name)
     if os.path.exists(file_path):
         print('\n이전 건축물대장발급한 이력이 있는 파일입니다.\n')
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -564,7 +588,12 @@ def get_building_register(driver=None, address='주소', dong=None, num=None):
     building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
     building_register_html = f"<html><head></head><body>{building_register_html}</body></html>"
     building_register_html = building_register_html.replace('style="background : url(/img/confirm/bgtest04.gif)"','')
-    with open(f'.\\data\\building_registers\\건축물대장_{address}_{dong}_{num}.html', 'w', encoding='utf-8') as file:
+
+    # 파일 경로 생성
+    file_path = os.path.join(save_dir, f"건축물대장_{address}_{dong}_{num}.html")
+
+    # 파일 쓰기
+    with open(file_path, 'w', encoding='utf-8') as file:
         file.write(building_register_html)
     
     # 기존 창으로 돌아가기

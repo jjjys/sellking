@@ -10,6 +10,7 @@ import logging
 from utils.driver_call import driver_call
 from utils.login import login_gov24
 from main import building_register_issuance_settings, search_address, search_dong, search_num, get_building_register
+from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -61,21 +62,23 @@ if missing_vars:
 # Global driver
 driver = None
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global driver
-    driver = driver_call()
-    logger.info("Initializing driver and logging in...")
-    if not login_gov24(driver=driver, gov24_ID=os.getenv("GOV24_ID"), gov24_PW=os.getenv("GOV24_PW")):
-        driver.quit()
-        raise HTTPException(status_code=500, detail="Login to gov24 failed")
+    try:
+        logger.info("Initializing driver and logging in...")
+        driver = driver_call()  # 드라이버 초기화
+        if not login_gov24(driver=driver, gov24_ID=os.getenv("GOV24_ID"), gov24_PW=os.getenv("GOV24_PW")):
+            driver.quit()
+            raise HTTPException(status_code=500, detail="Login to gov24 failed")
+        yield
+    finally:
+        if driver is not None:
+            driver.quit()
+            logger.info("Driver closed")
+            driver = None  # 전역 변수 초기화
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    global driver
-    if driver:
-        driver.quit()
-        logger.info("Driver closed")
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/get_building_register")
 async def get_building_register_endpoint(request: AddressRequest, token: str = Depends(verify_token)):

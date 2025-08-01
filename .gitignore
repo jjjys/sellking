@@ -8,6 +8,8 @@ sellking*/
 sellking_real_estate_agents_info_scraper/
 
 .vscode/
+
+.debug/
 .debug/*
 
 utils/__pycache_*_/

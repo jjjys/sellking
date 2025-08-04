@@ -11,3 +11,8 @@ __pycache__/
 venv/
 test-venv/
 *.md
+
+.debug
+.sellking_3.10
+.vscode
+data/*

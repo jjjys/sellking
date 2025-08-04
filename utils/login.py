@@ -170,11 +170,12 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
 def login_status_gov24(driver):
     try:
         driver.get('https://plus.gov.kr/')
+        elem_selector = '#iw_header > div.header-in > div > div.header-top > div > div.bottom'
         WebDriverWait(driver, timeout=10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, '#iw_header > div.header-in > div > div.header-top > div > div.bottom > div.header-search > button'))
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, elem_selector))
                 )
         time.sleep(1)
-        if '로그아웃' in driver.find_element(By.CSS_SELECTOR, "div.log-after.on").text:
+        if '로그아웃' in driver.find_element(By.CSS_SELECTOR, elem_selector).text:
             print('현재 상태:로그인')
             return True
         else:
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     GOV24_PW = os.getenv("GOV24_PW")
     #print(GOV24_ID)  
     #print(GOV24_PW) 
-    drv = driver_call()
+    driver = driver_call()
     for _ in range(0,10):
         print(f'{_+1} 번째 실행')
-        login_gov24(driver=drv, gov24_ID=GOV24_ID, gov24_PW=GOV24_PW)
+        login_gov24(driver=driver, gov24_ID=GOV24_ID, gov24_PW=GOV24_PW)

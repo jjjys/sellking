@@ -4,5 +4,5 @@ tunnels:
   python-app:
     addr: python-app:8000
     proto: http
-    schemes: [https, http]
+    schemes: [https]
 web_addr: 0.0.0.0:4040

@@ -36,14 +36,6 @@ RUN google-chrome --version || echo "Chrome installation failed" >&2
 RUN which google-chrome || echo "google-chrome not found" >&2
 RUN ls -l /usr/bin/google-chrome || echo "/usr/bin/google-chrome not found" >&2
 
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -U pip && \
-    pip install --no-cache-dir -r requirements.txt
-COPY ./ /app
-EXPOSE 8000
-CMD ["python", "api.py"]
-
 # 작업 디렉토리 설정
 WORKDIR /app
 

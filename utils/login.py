@@ -155,7 +155,7 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
                     print('로그인 성공!(캡챠 정답값 저장)')
                     img_rename = image_path.replace('.png',f'_{pred_captcha}.png')
                     os.rename(image_path, img_rename)
-                    break
+                    return True
                 
             # 로그인 후 화면 이동이 안되면 로그인 실패
             if (driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2):

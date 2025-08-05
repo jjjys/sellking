@@ -77,95 +77,94 @@ def image_to_ascii(image_path, width=100):
         print(f"Error: {str(e)}")
 
 def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
-    try:
-        if driver==None:
-            driver = driver_call()
-        
-        # 로그인 페이지 이동
+    for _ in range(0,3): # 3번 시도
         try:
-            driver.get('https://plus.gov.kr/login/loginIdPwd')
-            time.sleep(1)
-            if driver.current_url != 'https://plus.gov.kr/login/loginIdPwd':
-                driver.get('https://www.gov.kr/nlogin/loginById')
-                time.sleep(1)
-                if driver.current_url != 'https://www.gov.kr/nlogin/loginById':
-                    driver.find_element(By.CSS_SELECTOR, '#loginMoTabpanel01 > div > div:nth-child(2) > div > a:nth-child(1)').click()
-        except:
-            print('로그인 페이지 에러') # 위 코드에서 태그 변경
+            if driver==None:
+                driver = driver_call()
             
-        # 아이디 입력
-        time.sleep(1)
-        try:
-            driver.find_element(By.CSS_SELECTOR, '#input_id').send_keys(gov24_ID)
-        except:
-            driver.find_element(By.CSS_SELECTOR, '#userId').send_keys(gov24_ID) # 위 코드에서 태그 변경
+            # 로그인 페이지 이동
+            try:
+                driver.get('https://plus.gov.kr/login/loginIdPwd')
+                time.sleep(1)
+                if driver.current_url != 'https://plus.gov.kr/login/loginIdPwd':
+                    driver.get('https://www.gov.kr/nlogin/loginById')
+                    time.sleep(1)
+                    if driver.current_url != 'https://www.gov.kr/nlogin/loginById':
+                        driver.find_element(By.CSS_SELECTOR, '#loginMoTabpanel01 > div > div:nth-child(2) > div > a:nth-child(1)').click()
+            except:
+                print('로그인 페이지 에러, html 태그 변경 필요') # 위 코드에서 태그 변경
+                
+            # 아이디 입력
             time.sleep(1)
-        try:
-            driver.find_element(By.CSS_SELECTOR, ".btn.lg.btn-login").click()
-        except:
-            driver.find_element(By.CSS_SELECTOR, "#genLogin").click() # 위 코드에서 태그 변경
-        time.sleep(1)
-
-        # 비밀번호 입력
-        try:
-            driver.find_element(By.CSS_SELECTOR, '#input_pwd').send_keys(gov24_PW)
-        except:
-            driver.find_element(By.CSS_SELECTOR, '#pwd').send_keys(gov24_PW) # 위 코드에서 태그 변경
-
-        # 캡챠 이미지 저장
-        image_path = captcha_img_save(driver=driver)
-        pred_captcha = captcha_solve_with_gemini(image_path)
-        
-        # 캡챠 이미지 ASCII Art로 출력
-        image_to_ascii(image_path)
-        print(f"GEMINI 캡챠 예측값:{pred_captcha}")
-
-        # 캡챠 값 입력
-        #print("아래 예측값이 맞을 경우 그냥 엔터 입력")
-        #captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
-        captcha_attempt = ''
-        if captcha_attempt == '': # 입력값 없음
             try:
-                driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
-                captcha_attempt = pred_captcha
+                driver.find_element(By.CSS_SELECTOR, '#input_id').send_keys(gov24_ID)
             except:
-                driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
-        else:
-            try:
-                driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(captcha_attempt)
-            except:
-                driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(captcha_attempt) # 위 코드에서 태그 변경
-        
-        login_pwd_url_1 = 'https://plus.gov.kr/login/loginIdPwdTo'
-        login_pwd_url_2 = 'https://www.gov.kr/nlogin/loginByPswd'
-
-        # 로그인 버튼 클릭
-        if driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2:
+                driver.find_element(By.CSS_SELECTOR, '#userId').send_keys(gov24_ID) # 위 코드에서 태그 변경
+                time.sleep(1)
             try:
                 driver.find_element(By.CSS_SELECTOR, ".btn.lg.btn-login").click()
             except:
                 driver.find_element(By.CSS_SELECTOR, "#genLogin").click() # 위 코드에서 태그 변경
-        
-        for i in range(10):
-            print(f'캡챠 로그인 성공 판단 중..({i+1}/10)')
             time.sleep(1)
-            if driver.current_url != login_pwd_url_1 or\
-                driver.current_url != login_pwd_url_2 and\
-                ('로그아웃' in driver.find_element(By.CSS_SELECTOR, "div.log-after.on").text):
-                print('로그인 성공!(캡챠 정답값 저장)')
-                img_rename = image_path.replace('.png',f'_{captcha_attempt}.png')
-                os.rename(image_path, img_rename)
-                break
+
+            # 비밀번호 입력
+            try:
+                driver.find_element(By.CSS_SELECTOR, '#input_pwd').send_keys(gov24_PW)
+            except:
+                driver.find_element(By.CSS_SELECTOR, '#pwd').send_keys(gov24_PW) # 위 코드에서 태그 변경
+
+            # 캡챠 이미지 저장
+            image_path = captcha_img_save(driver=driver)
+            pred_captcha = captcha_solve_with_gemini(image_path)
             
-        # 로그인 후 화면 이동이 안되면 로그인 실패
-        if driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2:
-            print('로그인 실패!')
-            return False
-        time.sleep(3)
-        return  True
-    except:
-        print('로그인 시도 중 에러 발생!')
-        return False
+            # 캡챠 이미지 ASCII Art로 출력
+            #image_to_ascii(image_path)
+            #print(f"GEMINI 캡챠 예측값:{pred_captcha}")
+
+            # 캡챠 값 입력
+            #print("아래 예측값이 맞을 경우 그냥 엔터 입력")
+            #captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
+            # captcha_attempt = ''
+            # if captcha_attempt == '': # 입력값 없음
+            #     try:
+            #         driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
+            #         captcha_attempt = pred_captcha
+            #     except:
+            #         driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
+            # else:
+            try:
+                driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
+            except:
+                driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
+            
+            login_pwd_url_1 = 'https://plus.gov.kr/login/loginIdPwdTo'
+            login_pwd_url_2 = 'https://www.gov.kr/nlogin/loginByPswd'
+
+            # 로그인 버튼 클릭
+            if driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2:
+                try:
+                    driver.find_element(By.CSS_SELECTOR, ".btn.lg.btn-login").click()
+                except:
+                    driver.find_element(By.CSS_SELECTOR, "#genLogin").click() # 위 코드에서 태그 변경
+            
+            for i in range(3):
+                print(f'캡챠 로그인 성공 판단 중..({i+1}/3)')
+                time.sleep(1)
+                if (driver.current_url != login_pwd_url_1 or driver.current_url != login_pwd_url_2) and\
+                    not('입력확인 문자를 정확히 입력해 주세요.' in driver.page_source):
+                    print('로그인 성공!(캡챠 정답값 저장)')
+                    img_rename = image_path.replace('.png',f'_{pred_captcha}.png')
+                    os.rename(image_path, img_rename)
+                    break
+                
+            # 로그인 후 화면 이동이 안되면 로그인 실패
+            if (driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2):
+                print(f'로그인 실패!({_+1}/3)')
+            time.sleep(3)
+        except:
+            print('로그인 시도 중 에러 발생!')
+            break
+    return False
 
 def login_status_gov24(driver):
     try:
@@ -197,4 +196,6 @@ if __name__ == '__main__':
     driver = driver_call()
     for _ in range(0,10):
         print(f'{_+1} 번째 실행')
+        login_status_gov24(driver)
         login_gov24(driver=driver, gov24_ID=GOV24_ID, gov24_PW=GOV24_PW)
+        login_status_gov24(driver)

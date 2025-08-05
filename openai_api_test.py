@@ -4,21 +4,9 @@
 '''
 
 
-import time, os, re, json
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import SessionNotCreatedException
-from selenium.common.exceptions import NoAlertPresentException
-from selenium.webdriver.common.keys import Keys
+import os, json
 from dotenv import load_dotenv
 from openai import OpenAI
-
-import pandas as pd
-from utils.driver_call import driver_call
-
-from utils.login import login_gov24
 
 
 def openai_api(dong=None, num=None, gov24_dong_num=None):

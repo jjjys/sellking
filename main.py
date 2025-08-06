@@ -127,7 +127,12 @@ def building_register_issuance_settings(driver=None):
     try:
         # 로그인 상태 체크 후 필요 시 로그인
         if not login_status_gov24(driver):
-            login_gov24(driver)
+            load_dotenv()  # .env 읽기
+            GOV24_ID = os.getenv("GOV24_ID")
+            GOV24_PW = os.getenv("GOV24_PW")
+            login_gov24(driver=driver,
+                gov24_ID=GOV24_ID,
+                gov24_PW=GOV24_PW)
 
         # Navigate to issuance page
         driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
@@ -153,7 +158,9 @@ def building_register_issuance_settings(driver=None):
             driver.execute_script("arguments[0].click();", issue_button)
             print('회원 신청하기 버튼 클릭')
         except Exception as e:
-            print(f"Error clicking '회원 신청하기 버튼': {str(e)}")
+            # 간혹 나오는 화면이 없는 경우
+            #print(f"Error clicking '회원 신청하기 버튼': {str(e)}")
+            pass
 
         # Select "건축물대장(열람)"
         for _ in range(10):

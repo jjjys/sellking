@@ -50,7 +50,7 @@ class AddressRequest(BaseModel):
     address: str
     dong: Optional[str] = None
     num: Optional[str] = None
-    output_format: str = "html"
+    #output_format: str = "html"
 
 # Load environment variables
 load_dotenv()
@@ -124,8 +124,8 @@ async def get_building_register_endpoint(request: AddressRequest, token: str = D
                 dong=request.dong or "",
                 num=request.num or ""
             )
-            if request.output_format.lower() == "pdf":
-                raise HTTPException(status_code=501, detail="PDF conversion not implemented yet")
+            # if request.output_format.lower() == "pdf":
+            #     raise HTTPException(status_code=501, detail="PDF conversion not implemented yet")
             # Return HTML directly
             logger.info("Returning HTML response")
             return HTMLResponse(content=building_register_html, status_code=200)

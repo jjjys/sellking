@@ -1,7 +1,6 @@
-
 version: "2"
 tunnels:
-  building-register:
+  sellking-building-register:
     addr: building-register:8000
     proto: http
     schemes: [https]

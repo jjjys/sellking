@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   building-register:
-    build: .
+    image: sellking-building-register
     ports:
       - "8000:8000"
     env_file:
@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
     command:
       - "start"
-      - "building-register"
+      - "sellking-building-register"
       - "--config"
       - "/etc/ngrok.yml"
     env_file:

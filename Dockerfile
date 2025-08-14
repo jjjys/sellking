@@ -3,12 +3,8 @@ FROM python:3.10-slim
 # Chrome과 의존성 설치
 RUN apt-get update && apt-get install -y \
     wget \
-    unzip \
-    gnupg \
-    curl \
     libglib2.0-0 \
     libnss3 \
-    libgconf-2-4 \
     libfontconfig1 \
     libx11-6 \
     libx11-xcb1 \
@@ -45,7 +41,8 @@ RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # 애플리케이션 코드 복사
-COPY ./ /app
+COPY api.py main.py ./
+COPY utils/ ./utils/
 
 EXPOSE 8000
 

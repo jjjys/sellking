@@ -1,8 +1,8 @@
 
 version: "2"
 tunnels:
-  python-app:
-    addr: python-app:8000
+  building-register:
+    addr: building-register:8000
     proto: http
     schemes: [https]
 web_addr: 0.0.0.0:4040

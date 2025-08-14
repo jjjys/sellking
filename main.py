@@ -16,7 +16,7 @@ from utils.login import login_gov24, login_status_gov24
 
 def debug_check(driver): # 스크린샷, 코드 저장
     # docker ps  # 실행 중인 컨테이너 ID 확인
-    # docker exec -it <python-app-container-id> bash
+    # docker exec -it <container-id> bash
 
     # 스크린샷, 코드 확인
     # docker cp 773dcf75d203:/app/debug_screenshot.png C:\Users\user\Desktop\sellking\.debug\debug_screenshot.png

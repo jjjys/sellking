@@ -15,4 +15,6 @@ test-venv/
 .debug
 .sellking_3.10
 .vscode
-data/*
+data/
+public/
+.env

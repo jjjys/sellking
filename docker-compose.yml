@@ -5,8 +5,10 @@ services:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
+    # volumes: # .env 파일까지 이미지 빌드 되어 버리는 보안 이슈
+    #   - .:/app
+    env_file:
+      - .env
     networks:
       - app-network
     command: python api.py

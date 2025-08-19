@@ -85,10 +85,15 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
         try:
             # 로그인 페이지 이동
             try:
+                '''
+                정부24 로그인 페이지 랜덤으로 변경됨.
+                로그인이 계속 안되는 경우 아래
+                페이지1,2,3 중에 다른 하나로 driver.get() 수정필요
+                '''
                 login_page_1 = 'https://plus.gov.kr/login/loginIdPwd'
-                login_page_2 = 'https://www.gov.kr/nlogin/loginById' # 클릭 한번 해줘야함.
-                login_page_2 = 'https://plus.gov.kr/login?awqf=!2f' # 클릭 한번 해줘야함.
-                driver.get(login_page_1)
+                login_page_2 = 'https://www.gov.kr/nlogin/loginById'
+                login_page_3 = 'https://plus.gov.kr/login?awqf=!2f'
+                driver.get(login_page_2) # 안되는 경우 페이지 1,2,3 중에 하나로 변경
                 time.sleep(1)
                 if '간단히 로그인' in driver.page_source:
                     # 간단히 로그인 버튼 클릭

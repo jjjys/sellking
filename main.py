@@ -554,14 +554,6 @@ def get_building_register(driver=None, address='주소', dong=None, num=None):
     save_dir = os.path.join("data", "building_registers")
     os.makedirs(save_dir, exist_ok=True)  # 디렉토리가 없으면 생성
 
-    # 기존 파일이 있는 경우 해당 파일 읽고 반환
-    file_name = f"건축물대장_{address}_{dong}_{num}.html"
-    file_path = os.path.join("data", "building_registers", file_name)
-    if os.path.exists(file_path):
-        print('\n이전 건축물대장발급한 이력이 있는 파일입니다.\n')
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return file.read()
-
     # 신청하기 버튼 클릭
     driver.find_element(By.CSS_SELECTOR, "#btn_end").click()
 

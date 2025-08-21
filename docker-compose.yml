@@ -1,8 +1,11 @@
-version: '3.8'
+
 
 services:
   building-register:
-    image: sellking-building-register
+    build:
+      context: .
+      dockerfile: Dockerfile  # 생략 가능, 기본값은 'Dockerfile'
+    image: sellking-building-register-ui
     ports:
       - "8000:8000"
     env_file:
@@ -16,7 +19,7 @@ services:
     restart: unless-stopped
     command:
       - "start"
-      - "sellking-building-register"
+      - "sellking-building-register-ui"
       - "--config"
       - "/etc/ngrok.yml"
     env_file:

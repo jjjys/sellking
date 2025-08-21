@@ -16,5 +16,4 @@ test-venv/
 .sellking_3.10
 .vscode
 data/
-public/
 .env

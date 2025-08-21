@@ -43,6 +43,7 @@ RUN pip install --no-cache-dir -U pip && \
 # 애플리케이션 코드 복사
 COPY api.py main.py ./
 COPY utils/ ./utils/
+COPY static/ ./static/
 
 EXPOSE 8000
 

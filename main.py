@@ -77,7 +77,7 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
 
     # api 호출
     completion01 = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-4.1",
     store=True,
     messages=[
         {"role": "user", "content": prompt}

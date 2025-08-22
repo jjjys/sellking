@@ -3,17 +3,16 @@ from dotenv import load_dotenv
 import os,time
 from datetime import datetime
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from PIL import Image
-import numpy as np
 import google.generativeai as genai
 import base64
+import logging
+logger = logging.getLogger(__name__)
 
 def captcha_solve_with_gemini(image_path):
+    """Gemini AI를 사용하여 캡챠 이미지를 분석하고 숫자 값을 추출하는 함수."""
     try:
-        
         GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         genai.configure(api_key=GEMINI_API_KEY)
 
@@ -22,20 +21,20 @@ def captcha_solve_with_gemini(image_path):
             image_data = base64.b64encode(image_file.read()).decode('utf-8')
         
         #model = genai.GenerativeModel('gemini-1.5-pro')
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         response = model.generate_content([
             "이 이미지에서 보이는 숫자만 답변해줘.",
             {"inline_data": {"mime_type": "image/jpeg", "data": image_data}}
         ])
         
-        print("캡챠 분석 결과:")
-        print(response.text)
+        logger.info(f"캡챠 분석 결과:{response.text}")
         return response.text
     except Exception as e:
-        print(f"캡챠 분석 중 오류 발생: {e}")
+        logger.info(f"캡챠 분석 중 오류 발생: {e}")
 
 def captcha_img_save(driver=None):
+    """Selenium 드라이버에서 캡챠 이미지를 캡처하여 파일로 저장하는 함수."""
     try:
         # 저장할 디렉토리 경로
         save_dir = os.path.join("data", "captcha")
@@ -52,35 +51,14 @@ def captcha_img_save(driver=None):
             driver.find_element(By.CSS_SELECTOR, '#cimg').screenshot(filepath) # 위 코드에서 태그 변경
 
         # 완료 메시지
-        print(f"캡차 이미지 저장 완료: {filepath}")
+        logger.info(f"캡차 이미지 저장 완료: {filepath}")
         return filepath
     except:
-        print('캡챠 이미지 저장 실패')
+        logger.info('캡챠 이미지 저장 실패')
         return False
 
-def image_to_ascii(image_path, width=100):
-    try:
-        # Load image
-        img = Image.open(image_path)
-        if img.mode != 'L':  # Convert to grayscale only if needed
-            img = img.convert('L')
-        img = img.resize((width, int((img.height / img.width) * width * 0.55)))
-
-        # Define ASCII characters
-        ascii_chars = '@%#*+=-:. '
-        pixels = np.array(img)
-        ascii_image = np.array([ascii_chars[p // 32] for p in pixels.ravel()]).reshape(pixels.shape)
-
-        # Print ASCII art
-        for row in ascii_image:
-            print(''.join(row))
-            
-    except FileNotFoundError:
-        print(f"Error: File {image_path} not found.")
-    except Exception as e:
-        print(f"Error: {str(e)}")
-
 def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
+    """정부24 사이트에 로그인하는 함수. 캡챠를 처리하고 여러 번 시도."""
     for _ in range(0,3): # 3번 시도
         try:
             # 로그인 페이지 이동
@@ -100,58 +78,43 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
                     driver.find_element(By.CSS_SELECTOR, '#loginMoTabpanel01 > div > div:nth-child(2) > div > a:nth-child(1)').click()
                     time.sleep(1)
             except:
-                print('로그인 페이지 에러, html 태그 변경 필요') # 위 코드에서 태그 변경
+                logger.info('로그인 페이지 에러, html 태그 변경 필요') # 위 코드에서 태그 변경
                 
             # 아이디 입력
             time.sleep(1)
             try:
-                print('아이디 값 입력(태그1)')
+                logger.info('아이디 값 입력(태그1)')
                 driver.find_element(By.CSS_SELECTOR, '#input_id').send_keys(gov24_ID)
             except:
-                print('아이디 값 입력(태그2)')
+                logger.info('아이디 값 입력(태그2)')
                 driver.find_element(By.CSS_SELECTOR, '#userId').send_keys(gov24_ID) # 위 코드에서 태그 변경
             time.sleep(1)
             try:
-                print('아이디 다음 버튼 클릭(태그1)')
+                logger.info('아이디 다음 버튼 클릭(태그1)')
                 driver.find_element(By.CSS_SELECTOR, ".btn.lg.btn-login").click()
             except:
-                print('아이디 다음 버튼 클릭(태그2)')
+                logger.info('아이디 다음 버튼 클릭(태그2)')
                 driver.find_element(By.CSS_SELECTOR, "#genLogin").click() # 위 코드에서 태그 변경
             time.sleep(1)
 
             # 비밀번호 입력
             try:
-                print('비밀번호 값 입력(태그1)')
+                logger.info('비밀번호 값 입력(태그1)')
                 driver.find_element(By.CSS_SELECTOR, '#input_pwd').send_keys(gov24_PW)
             except:
-                print('비밀번호 값 입력(태그2)')
+                logger.info('비밀번호 값 입력(태그2)')
                 driver.find_element(By.CSS_SELECTOR, '#pwd').send_keys(gov24_PW) # 위 코드에서 태그 변경
 
             # 캡챠 이미지 저장
             image_path = captcha_img_save(driver=driver)
             pred_captcha = captcha_solve_with_gemini(image_path)
             
-            # 캡챠 이미지 ASCII Art로 출력
-            #image_to_ascii(image_path)
-            #print(f"GEMINI 캡챠 예측값:{pred_captcha}")
-
-            # 캡챠 값 입력
-            #print("아래 예측값이 맞을 경우 그냥 엔터 입력")
-            #captcha_attempt = input(f'캡챠 입력 후 엔터(예측값:{pred_captcha}):')
-            # captcha_attempt = ''
-            # if captcha_attempt == '': # 입력값 없음
-            #     try:
-            #         driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
-            #         captcha_attempt = pred_captcha
-            #     except:
-            #         driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
-            # else:
             try:
                 driver.find_element(By.CSS_SELECTOR, '#label_05_01').send_keys(pred_captcha)
-                print('캡챠 정답 값 입력(태그1)')
+                logger.info('캡챠 정답 값 입력(태그1)')
             except:
                 driver.find_element(By.CSS_SELECTOR, '#answer').send_keys(pred_captcha) # 위 코드에서 태그 변경
-                print('캡챠 정답 값 입력(태그2)')
+                logger.info('캡챠 정답 값 입력(태그2)')
             
             login_pwd_url_1 = 'https://plus.gov.kr/login/loginIdPwdTo'
             login_pwd_url_2 = 'https://www.gov.kr/nlogin/loginByPswd'
@@ -160,31 +123,32 @@ def login_gov24(driver=None, gov24_ID='', gov24_PW=''):
             if driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2:
                 try:
                     driver.find_element(By.CSS_SELECTOR, ".btn.lg.btn-login").click()
-                    print('로그인 버튼 클릭 (태그1)')
+                    logger.info('로그인 버튼 클릭 (태그1)')
                 except:
                     driver.find_element(By.CSS_SELECTOR, "#genLogin").click() # 위 코드에서 태그 변경
-                    print('로그인 버튼 클릭 (태그2)')
+                    logger.info('로그인 버튼 클릭 (태그2)')
             
             for i in range(3):
-                print(f'캡챠 로그인 성공 판단 중..({i+1}/3)')
+                logger.info(f'캡챠 로그인 성공 판단 중..({i+1}/3)')
                 time.sleep(1)
                 if (driver.current_url != login_pwd_url_1 or driver.current_url != login_pwd_url_2) and\
                     not('입력확인 문자를 정확히 입력해 주세요.' in driver.page_source):
-                    print('로그인 성공!(캡챠 정답값 저장)')
+                    logger.info('로그인 성공!(캡챠 정답값 저장)')
                     img_rename = image_path.replace('.png',f'_{pred_captcha}.png')
                     os.rename(image_path, img_rename)
                     return True
                 
             # 로그인 후 화면 이동이 안되면 로그인 실패
             if (driver.current_url == login_pwd_url_1 or driver.current_url == login_pwd_url_2):
-                print(f'로그인 실패!({_+1}/3)')
+                logger.info(f'로그인 실패!({_+1}/3)')
             time.sleep(3)
         except:
-            print('로그인 시도 중 에러 발생!')
+            logger.info('로그인 시도 중 에러 발생!')
             break
     return False
 
 def login_status_gov24(driver):
+    """정부24 사이트의 현재 로그인 상태를 확인하는 함수."""
     try:
         driver.get('https://plus.gov.kr/')
         elem_selector = '#iw_header > div.header-in > div > div.header-top > div > div.bottom'
@@ -193,13 +157,13 @@ def login_status_gov24(driver):
                 )
         time.sleep(1)
         if '로그아웃' in driver.find_element(By.CSS_SELECTOR, elem_selector).text:
-            print('현재 상태:로그인')
+            logger.info('현재 상태:로그인')
             return True
         else:
-            print('현재 상태:로그아웃')
+            logger.info('현재 상태:로그아웃')
             return False
     except Exception as e:
-        print(f'로그인 상태 체크 에러\n{e}')
+        logger.info(f'로그인 상태 체크 에러\n{e}')
         return False
 
     
@@ -209,11 +173,9 @@ if __name__ == '__main__':
     load_dotenv()  # .env 읽기
     GOV24_ID = os.getenv("GOV24_ID")
     GOV24_PW = os.getenv("GOV24_PW")
-    #print(GOV24_ID)  
-    #print(GOV24_PW) 
     driver = driver_call()
     for _ in range(0,10):
-        print(f'{_+1} 번째 실행')
+        logger.info(f'{_+1} 번째 실행')
         login_status_gov24(driver)
         login_gov24(driver=driver, gov24_ID=GOV24_ID, gov24_PW=GOV24_PW)
         login_status_gov24(driver)

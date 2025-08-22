@@ -1,9 +1,7 @@
-import time, os, re, json
-import undetected_chromedriver as uc
+import time, os, json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import SessionNotCreatedException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.keys import Keys
 from dotenv import load_dotenv
@@ -13,29 +11,30 @@ import pandas as pd
 from utils.driver_call import driver_call
 from utils.login import login_gov24, login_status_gov24
 
+import logging
+logger = logging.getLogger(__name__)
 
-def debug_check(driver): # 스크린샷, 코드 저장
-    # docker ps  # 실행 중인 컨테이너 ID 확인
-    # docker exec -it <container-id> bash
 
-    # 스크린샷, 코드 확인
-    # docker cp 773dcf75d203:/app/debug_screenshot.png C:\Users\user\Desktop\sellking\.debug\debug_screenshot.png
-    # docker cp 773dcf75d203:/app/page_source.html C:\Users\user\Desktop\sellking\.debug\page_source.html
-    
+def debug_check(driver):
+    """
+    디버깅을 위해 현재 웹 페이지의 스크린샷과 HTML 소스를 저장하는 함수.
+    """
     driver.save_screenshot("/app/debug_screenshot.png")
     with open("/app/page_source.html", "w", encoding="utf-8") as f:
         f.write(driver.page_source)
 
 def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
-    '''
-    설명:
-    입력:동&호수 데이터, 정부24 동 혹은 호수 선택 리스트
-    출력:정부24 동 혹은 호수 값 중 1개
-    '''
+    """
+    OpenAI API를 사용하여 입력된 동/호수 정보와 정부24 선택지 중 가장 적합한 값을 선택하는 함수.
+    
+    :param dong: 입력된 동 정보 (예: '101동')
+    :param num: 입력된 호수 정보 (예: '101호')
+    :param gov24_dong_num: 정부24 사이트에서 제공된 동/호수 선택지 리스트
+    :param dong_or_num: 선택지가 동인지 호수인지 구분하는 문자열 ('동' 또는 '호수')
+    :return: JSON 형식의 결과 (정답, 신뢰도, 추론이유 포함) 또는 에러 시 False
+    """
     # 사전 작업
     load_dotenv()  # .env 읽기
-    #OPENAI_API_KEY_TMP = os.getenv("OPENAI_API_KEY_TMP")
-    #OPENAI_API_KEY_PRG = os.getenv("OPENAI_API_KEY_PRG")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     client = OpenAI(api_key = OPENAI_API_KEY)
 
@@ -84,9 +83,9 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
         {"role": "user", "content": prompt}
     ]
     )
-    print(' ============= openai api result ============= ')
-    #print(f'input:{prompt}\n')
-    print(f'output:{completion01.choices[0].message.content}\n')
+    logger.info(' ============= openai api result ============= ')
+    #logger.info(f'input:{prompt}\n')
+    logger.info(f'output:{completion01.choices[0].message.content}\n')
 
     result = completion01.choices[0].message.content
 
@@ -96,10 +95,10 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
         if isinstance(result, dict):
             return result
         else:
-            print(f'ai 응답이 json 형태가 아닙니다.')
+            logger.info(f'ai 응답이 json 형태가 아닙니다.')
             return False
     except:
-        print('ai 응답 json형태 미일치 오류')
+        logger.info('ai 응답 json형태 미일치 오류')
         result = {
             "정답": "[ai 응답] json형태 미일치 오류",
             "신뢰도": "",
@@ -108,22 +107,28 @@ def openai_api(dong=None, num=None, gov24_dong_num=None, dong_or_num=None):
         return result
 
 def check_alert(driver=None):
+    """
+    Selenium 드라이버에서 경고창(alert)이 있는지 확인하고, 있으면 텍스트를 반환하는 함수.
+    
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :return: 경고창 텍스트 (존재 시), 없으면 False
+    """
     try:
         # 경고창 확인 시도
         alert = driver.switch_to.alert
-        print("경고창이 확인됨.\n경고창 내용:", alert.text)
+        logger.info("경고창이 확인됨.\n경고창 내용:", alert.text)
         return alert.text
     except NoAlertPresentException:
-        print("경고창이 없습니다.")
+        logger.info("경고창이 없습니다.")
         return False
 
 def building_register_issuance_settings(driver=None):
-    '''
-    건축물대장 발급 전 세팅.
-    1.발급/열람
-    2.집합건물
-    3.전유부
-    '''
+    """
+    건축물대장 발급을 위한 사전 페이지 세팅 함수 (발급/열람, 집합건물, 전유부 선택).
+    
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :return: 세팅 성공 시 True, 실패 시 False (예외 발생 시)
+    """
     try:
         # 로그인 상태 체크 후 필요 시 로그인
         if not login_status_gov24(driver):
@@ -137,7 +142,7 @@ def building_register_issuance_settings(driver=None):
         # Navigate to issuance page
         driver.get('https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098&HighCtgCD=A02004002&tp_seq=01&Mcode=10205')
         time.sleep(2)  # Allow page to load
-        print('발급 페이지 이동 완료')
+        logger.info('발급 페이지 이동 완료')
 
         # Click "발급하기" button
         try:
@@ -145,9 +150,9 @@ def building_register_issuance_settings(driver=None):
                 EC.element_to_be_clickable((By.LINK_TEXT, '발급하기'))
             )
             driver.execute_script("arguments[0].click();", issue_button)  # JavaScript click to avoid interactability issues
-            print('발급하기 버튼 클릭')
+            logger.info('발급하기 버튼 클릭')
         except Exception as e:
-            print(f"Error clicking '발급하기': {str(e)}")
+            logger.info(f"Error clicking '발급하기': {str(e)}")
             raise
 
         # 간혹 나오는 화면 처리.
@@ -156,10 +161,10 @@ def building_register_issuance_settings(driver=None):
                 EC.element_to_be_clickable((By.LINK_TEXT, '회원 신청하기'))
             )
             driver.execute_script("arguments[0].click();", issue_button)
-            print('회원 신청하기 버튼 클릭')
+            logger.info('회원 신청하기 버튼 클릭')
         except Exception as e:
             # 간혹 나오는 화면이 없는 경우
-            #print(f"Error clicking '회원 신청하기 버튼': {str(e)}")
+            #logger.info(f"Error clicking '회원 신청하기 버튼': {str(e)}")
             pass
 
         # Select "건축물대장(열람)"
@@ -169,7 +174,7 @@ def building_register_issuance_settings(driver=None):
                     EC.visibility_of_element_located((By.CSS_SELECTOR, 'li.active.visible'))
                 )
                 if issue_open_state.text != '건축물대장(열람)':
-                    print(f'건축물대장(열람)으로 전환 중...({_+1}/10)')
+                    logger.info(f'건축물대장(열람)으로 전환 중...({_+1}/10)')
                     WebDriverWait(driver, timeout=10).until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, ".mw_sel_list li.visible"))
                     )
@@ -180,11 +185,11 @@ def building_register_issuance_settings(driver=None):
                             break
                     time.sleep(1)
                 else:
-                    print('Already in 열람 state')
+                    logger.info('Already in 열람 state')
                     break
 
             except Exception as e:
-                print(f"Error selecting 열람: {str(e)}")
+                logger.info(f"Error selecting 열람: {str(e)}")
                 raise
 
         # Scroll to address search button
@@ -195,7 +200,7 @@ def building_register_issuance_settings(driver=None):
             driver.execute_script("arguments[0].scrollIntoView(true);", search_element)
             time.sleep(1)
         except Exception as e:
-            print(f"Error finding address search button: {str(e)}")
+            logger.info(f"Error finding address search button: {str(e)}")
             raise
 
         # Select 집합건물 and 전유부
@@ -203,32 +208,35 @@ def building_register_issuance_settings(driver=None):
         junyuebu = driver.find_element(By.CSS_SELECTOR, '#dis_2 > div > div:nth-child(3) > label')
         try:
             if '집합(아파트,연립주택 등)' in set_building.text:
-                print('Selecting 집합건물...')
+                logger.info('Selecting 집합건물...')
                 set_building.click()
                 #driver.execute_script("arguments[0].click();", set_building)
             else:
-                print('집합건물 not found in expected element')
+                logger.info('집합건물 not found in expected element')
 
             if '전유부' in junyuebu.text:
-                print('Selecting 전유부...')
+                logger.info('Selecting 전유부...')
                 junyuebu.click()
                 #driver.execute_script("arguments[0].click();", junyuebu)
             else:
-                print('전유부 not found in expected element')
+                logger.info('전유부 not found in expected element')
         except Exception as e:
-            print(f"Error selecting 집합건물 or 전유부: {str(e)}")
+            logger.info(f"Error selecting 집합건물 or 전유부: {str(e)}")
             raise
 
         return True
     except Exception as e:
-        print(f"Error in building_register_issuance_settings: {str(e)}")
+        logger.info(f"Error in building_register_issuance_settings: {str(e)}")
         return False
     
 def search_address(driver=None, address='주소'):
-    '''
-    desc: 주소창 선택하기 팝업에서 입력받은 주소를 선택
-    return: JSON 형식의 딕셔너리 {"success": bool, "message": str}
-    '''
+    """
+    정부24 사이트에서 주소를 검색하고 결과를 반환하는 함수.
+    
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :param address: 검색할 주소 문자열
+    :return: 검색 성공 여부와 메시지를 포함한 딕셔너리
+    """
     fail_msg = ''
     
     # 주소 검색 버튼 클릭으로 새 창 띄우기
@@ -242,9 +250,9 @@ def search_address(driver=None, address='주소'):
     for i in range(0,5):
         if len(driver.window_handles) > 1:
             # 안정성 고려: and driver.title=='주소검색'
-            print("새 창(주소) 확인되었습니다.")
+            logger.info("새 창(주소) 확인되었습니다.")
             break
-        print(f'새 창(주소) 탐색 중..({i+1}/5초)')
+        logger.info(f'새 창(주소) 탐색 중..({i+1}/5초)')
         time.sleep(1)
     driver.switch_to.window(driver.window_handles[1]) # 새 창 이동    
     new_drv_hnd = driver.current_window_handle
@@ -262,8 +270,8 @@ def search_address(driver=None, address='주소'):
         ).find_elements(By.CSS_SELECTOR, ':scope > a')
     except Exception as e:
         fail_msg = "[주소]주소 검색 결과 확인 불가"
-        print(f'검색어:{address}')
-        print(''' - 검색 결과 확인 불가.
+        logger.info(f'검색어:{address}')
+        logger.info(''' - 검색 결과 확인 불가.
               검색 결과가 없는 경우: asdf(이상한 값 입력)
               검색창의 입력값이 없는 경우: (공란)
               검색 범위가 넓은 경우: 서웉특별시''')
@@ -294,7 +302,7 @@ def search_address(driver=None, address='주소'):
     time.sleep(1)
     if len(driver.window_handles) > 1:
         fail_msg = '[주소]행정처리기관 추가 선택 필요'
-        print(fail_msg)
+        logger.info(fail_msg)
         driver.close()
         driver.switch_to.window(driver.window_handles[0]) # 기존 창으로 이동
         return {"success": False, "message": fail_msg}
@@ -304,18 +312,16 @@ def search_address(driver=None, address='주소'):
     return {"success": True, "message": fail_msg}
 
 def search_dong(driver=None, dong=None, num=None):
-    '''
-    desc: 동 선택. 2개 이상일 경우 LLM 이용
-    param: driver, dong, num
-    return: JSON 형식의 딕셔너리 {
-        "success": bool,
-        "dong_list": list or null,
-        "selected_dong": str or null,
-        "ai_response": dict or null
-    }
-    '''
+    """
+    정부24 사이트에서 동 정보를 검색하고 AI로 적합한 동을 선택하는 함수.
     
-    # 주소 검색 버튼 클릭으로 새 창 띄우기
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :param dong: 검색할 동 정보
+    :param num: 호수 정보 (AI 판단에 사용)
+    :return: 동 리스트, AI 선택 결과, 성공 여부를 포함한 딕셔너리
+    """
+    
+    # 동 검색 버튼 클릭으로 새 창 띄우기
     search_element = WebDriverWait(driver, timeout=T_DEFAULT).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, '#동명검색'))
     )
@@ -326,7 +332,7 @@ def search_dong(driver=None, dong=None, num=None):
     for i in range(0, 6):
         alert_msg = check_alert(driver=driver)
         if len(driver.window_handles) > 1:
-            print("새 창(동 선택 창) 확인되었습니다.")
+            logger.info("새 창(동 선택 창) 확인되었습니다.")
             driver.switch_to.window(driver.window_handles[1])  # 새 창 이동 
             break
         # 동 검색결과 없음
@@ -351,7 +357,7 @@ def search_dong(driver=None, dong=None, num=None):
                 "selected_dong": "",
                 "ai_response": res
             }
-        print(f'새 창(동 선택 창) 탐색 중..({i+1}/5초)')
+        logger.info(f'새 창(동 선택 창) 탐색 중..({i+1}/5초)')
         time.sleep(1)
        
 
@@ -360,7 +366,7 @@ def search_dong(driver=None, dong=None, num=None):
     dong_list = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".tbl_list.border"))
     ).find_elements(By.CSS_SELECTOR, 'table tbody tr a')
-    print(f'동 출력 결과 개수: {len(dong_list)}개')
+    logger.info(f'동 출력 결과 개수: {len(dong_list)}개')
     dong_1st = dong_list[0].text # 클릭 시 팝업 창 꺼지기 때문에 데이터 저장해놓고 사용.
     
     if len(dong_list) < 2:  # 동수가 1개 나온 경우
@@ -401,7 +407,7 @@ def search_dong(driver=None, dong=None, num=None):
         # 입력값과 예측값 일치하는 경우 > 클릭
         for idx, itm in enumerate(dong_list):
             if ai_res['정답'] == itm.text.strip():
-                print("예측값과 일치하는 항목 클릭")
+                logger.info("예측값과 일치하는 항목 클릭")
                 dong_list[idx].click()
                 driver.switch_to.window(driver.window_handles[0])
                 time.sleep(1)
@@ -413,14 +419,14 @@ def search_dong(driver=None, dong=None, num=None):
                     "ai_response": ai_res
                 }
             
-        print(f'동 입력값:{dong}')
-        print(f'동 예측값:{ai_res["정답"]}')
+        logger.info(f'동 입력값:{dong}')
+        logger.info(f'동 예측값:{ai_res["정답"]}')
         time.sleep(1)
 
         # 입력값과 예측값 일치하지 않는 경우 > ai 응답 오류
         if len(driver.window_handles) > 1:
-            print('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
-            print('선택지 클릭 불가')
+            logger.info('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
+            logger.info('선택지 클릭 불가')
             ai_res['정답'] = f'ai 응답 오류: 정확히 일치하는 값을 응답하지 않음\n예측값:{ai_res["정답"]}'
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -433,13 +439,16 @@ def search_dong(driver=None, dong=None, num=None):
             }
         
 def search_num(driver=None, dong=None, num=None): 
-    '''
-    desc: 호수 선택. 2개 이상일 경우 LLM 이용
-    parm: driver, dong, num
-    return: JSON object with success, num_list, selected_num, and ai_response
-    '''
+    """
+    정부24 사이트에서 호수 정보를 검색하고 AI로 적합한 호수를 선택하는 함수.
     
-    # 주소 검색 버튼 클릭으로 새 창 띄우기
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :param dong: 동 정보 (AI 판단에 사용)
+    :param num: 검색할 호수 정보
+    :return: 호수 리스트, AI 선택 결과, 성공 여부를 포함한 딕셔너리
+    """
+    
+    # 호수 검색 버튼 클릭으로 새 창 띄우기
     search_element = WebDriverWait(driver, timeout=T_DEFAULT).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, '#호명검색'))
     )
@@ -449,7 +458,7 @@ def search_num(driver=None, dong=None, num=None):
     for i in range(0, 6):
         alert_msg = check_alert(driver=driver)
         if len(driver.window_handles) > 1:
-            print("새 창(호수 선택 창) 확인되었습니다.")
+            logger.info("새 창(호수 선택 창) 확인되었습니다.")
             driver.switch_to.window(driver.window_handles[1])  # 새 창 이동    
             break
         # 호수 검색 클릭 안되는 경우
@@ -474,7 +483,7 @@ def search_num(driver=None, dong=None, num=None):
                 "selected_num": "",
                 "ai_response": res
             }
-        print(f'새 창(호수 선택 창) 탐색 중..({i+1}/5초)')
+        logger.info(f'새 창(호수 선택 창) 탐색 중..({i+1}/5초)')
         time.sleep(1)    
 
     # 호수 검색 결과 확인 
@@ -482,7 +491,7 @@ def search_num(driver=None, dong=None, num=None):
     num_list = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".tbl_list.border"))
     ).find_elements(By.CSS_SELECTOR, 'table tbody tr a')
-    print(f'호수 출력 결과 개수: {len(num_list)}개')
+    logger.info(f'호수 출력 결과 개수: {len(num_list)}개')
     num_1st = num_list[0].text # 클릭 시 팝업 창 꺼지기 때문에 데이터 저장해놓고 사용.
     if len(num_list) < 2:  # 호수가 1개 나온 경우
         num_list[0].click()
@@ -519,7 +528,7 @@ def search_num(driver=None, dong=None, num=None):
         # 입력값과 예측값 일치하는 경우 > 클릭
         for idx, itm in enumerate(num_list):
             if ai_res['정답'] == itm.text.strip():
-                print("예측값과 일치하는 항목 클릭")
+                logger.info("예측값과 일치하는 항목 클릭")
                 num_list[idx].click()
                 driver.switch_to.window(driver.window_handles[0])
                 time.sleep(1)
@@ -530,14 +539,14 @@ def search_num(driver=None, dong=None, num=None):
                     "ai_response": ai_res
                 }
                 
-        print(f'호수 입력값:{num}')
-        print(f'호수 예측값:{ai_res["정답"]}')
+        logger.info(f'호수 입력값:{num}')
+        logger.info(f'호수 예측값:{ai_res["정답"]}')
         time.sleep(1)
         
         
         if len(driver.window_handles) > 1:
-            print('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
-            print('선택지 클릭 불가')
+            logger.info('ai 응답 오류: 정확히 일치하는 값을 응답하지 않음')
+            logger.info('선택지 클릭 불가')
             ai_res['정답'] = f'ai 응답 오류: 정확히 일치하는 값을 응답하지 않음\n예측값:{ai_res["정답"]}'
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -550,54 +559,67 @@ def search_num(driver=None, dong=None, num=None):
             }
 
 def get_building_register(driver=None, address='주소', dong=None, num=None):
-    # 저장할 디렉토리 경로
-    save_dir = os.path.join("data", "building_registers")
-    os.makedirs(save_dir, exist_ok=True)  # 디렉토리가 없으면 생성
+    """
+    정부24 사이트에서 건축물대장을 발급하고 HTML 형식으로 반환하는 함수.
+    
+    :param driver: Selenium 웹 드라이버 인스턴스
+    :param address: 건물 주소
+    :param dong: 동 정보
+    :param num: 호수 정보
+    :return: 건축물대장 HTML 문자열
+    """
+    try:
+        # 저장할 디렉토리 경로
+        save_dir = os.path.join("data", "building_registers")
+        os.makedirs(save_dir, exist_ok=True)  # 디렉토리가 없으면 생성
 
-    # 신청하기 버튼 클릭
-    driver.find_element(By.CSS_SELECTOR, "#btn_end").click()
+        # 신청하기 버튼 클릭
+        driver.find_element(By.CSS_SELECTOR, "#btn_end").click()
 
-    # 열람/발급 페이지 이동
-    if driver.current_url != 'https://plus.gov.kr/mypage/mbrAplySrvcList':
-        for _ in range(0,60):
-            print(f'열람/발급 페이지 이동 확인 중...({_+1}/60)초. 현재 페이지:{driver.current_url}')
+        # 열람/발급 페이지 이동
+        if driver.current_url != 'https://plus.gov.kr/mypage/mbrAplySrvcList':
+            for _ in range(0,60):
+                logger.info(f'열람/발급 페이지 이동 확인 중...({_+1}/60)초. 현재 페이지:{driver.current_url}')
+                time.sleep(1)
+                if 'https://plus.gov.kr/mypage/mbrAplySrvcList' in driver.current_url:
+                    logger.info('열람/발급 페이지 확인되었습니다.')
+                    break
+        
+        # 열람/발급 문서 클릭
+        WebDriverWait(driver, timeout=T_DEFAULT).until(
+                EC.visibility_of_element_located((By.XPATH, '//*[@id="iw_container"]/div[1]/div[2]/div[5]/div[1]/div[2]/div[1]/table/tbody/tr/td[4]/span[2]/button'))
+            ).click()
+        
+
+        # 새 창에서 html 전처리 작업 후 저장
+        for _ in range(0,180):
+            logger.info(f'열람/발급 창 확인 중...({_+1}/180)초')
             time.sleep(1)
-            if 'https://plus.gov.kr/mypage/mbrAplySrvcList' in driver.current_url:
-                print('열람/발급 페이지 확인되었습니다.')
+            if len(driver.window_handles) > 1:
+                logger.info(f'열람/발급 창 확인되었습니다.')
+                driver.switch_to.window(driver.window_handles[1])
+                time.sleep(1)
                 break
-    
-    # 열람/발급 문서 클릭
-    WebDriverWait(driver, timeout=T_DEFAULT).until(
-            EC.visibility_of_element_located((By.XPATH, '//*[@id="iw_container"]/div[1]/div[2]/div[5]/div[1]/div[2]/div[1]/table/tbody/tr/td[4]/span[2]/button'))
-        ).click()
-    
+        building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
+        building_register_html = f"<html><head></head><body>{building_register_html}</body></html>"
+        building_register_html = building_register_html.replace('style="background : url(/img/confirm/bgtest04.gif)"','')
 
-    # 새 창에서 html 전처리 작업 후 저장
-    for _ in range(0,180):
-        print(f'열람/발급 창 확인 중...({_+1}/180)초')
-        time.sleep(1)
-        if len(driver.window_handles) > 1:
-            print(f'열람/발급 창 확인되었습니다.')
-            driver.switch_to.window(driver.window_handles[1])
-            time.sleep(1)
-            break
-    building_register_html = driver.find_element(By.CLASS_NAME, 'minwon-preview').get_attribute('outerHTML').replace('euc-kr','UTF-8')
-    building_register_html = f"<html><head></head><body>{building_register_html}</body></html>"
-    building_register_html = building_register_html.replace('style="background : url(/img/confirm/bgtest04.gif)"','')
+        # 파일 경로 생성
+        file_path = os.path.join(save_dir, f"건축물대장_{address}_{dong}_{num}.html")
 
-    # 파일 경로 생성
-    file_path = os.path.join(save_dir, f"건축물대장_{address}_{dong}_{num}.html")
+        # 파일 쓰기
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(building_register_html)
+        
+        # 기존 창으로 돌아가기
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
 
-    # 파일 쓰기
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(building_register_html)
-    
-    # 기존 창으로 돌아가기
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
-
-    # 반환값.
-    return building_register_html
+        # 반환값.
+        return building_register_html
+    except Exception as e:
+        logger.info(f"건축물대장 발급 오류: {str(e)}")
+        return ""
 
 def main():
     try:
@@ -637,17 +659,17 @@ def main():
             num = row[df.columns[2]]      # 호수
 
             # 주소, 동, 호수 전체 값 확인
-            print('\n'*3)
-            print('='*20)
-            print('='*20)
-            print(f"행 {index + 1}:")
-            print(f"address:{address}")
-            print(f"dong:{dong}")
-            print(f"num:{num}")
-            print("=" * 20,'\n') 
+            logger.info('\n'*3)
+            logger.info('='*20)
+            logger.info('='*20)
+            logger.info(f"행 {index + 1}:")
+            logger.info(f"address:{address}")
+            logger.info(f"dong:{dong}")
+            logger.info(f"num:{num}")
+            logger.info("=" * 20,'\n') 
 
             # if '인천광역시' in address or '경기도 평택시' in address: # 경기도 평택시 송일로5번길 37
-            #     print(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
+            #     logger.info(f"행 {index + 1}: 인천광역시 포함 주소입니다. 건너뜁니다.")
             #     continue  # pass 대신 continue를 사용하여 다음 행으로 이동
             
             
@@ -664,7 +686,7 @@ def main():
             # 주소 검색
             result_address = search_address(driver=driver, address=address)
             if result_address['success'] == False:
-                print(result_address['message'])
+                logger.info(result_address['message'])
                 df.at[index, 'gov24_dong_list'] = result_address['message']
                 df.to_excel(output_file_path, index=False, engine="openpyxl")
                 continue
@@ -686,14 +708,14 @@ def main():
 
                 # 건축물 대장 발급 신청(주소,동,호수 문제 없는 경우)
                 if result_num['success']:
-                    print('\n건축물 대장 발급 진행\n')
+                    logger.info('\n건축물 대장 발급 진행\n')
                     building_register_html = get_building_register(driver=driver, address=address, dong=dong, num=num)
             
             # 수정된 DataFrame을 엑셀 파일로 저장
             df.to_excel(output_file_path, index=False, engine="openpyxl")
-            print(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
+            logger.info(f"수정된 파일이 {output_file_path}에 저장되었습니다.")
     except:
-        print("main error")
+        logger.info("main error")
     
     finally:
         driver.quit()

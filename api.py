@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     try:
         driver = driver_call()
         if not login_gov24(driver=driver, gov24_ID=GOV24_ID, gov24_PW=GOV24_PW):
-            raise RuntimeError("정부24 로그인 실패. ID/PW 확인 필요")
+            raise RuntimeError("정부24 서버 문제로 로그인 실패. 잠시후 다시 시도 해주세요.(5분 정도 이후)")
         logger.info("정부24 로그인 성공")
         yield
     finally:
@@ -93,15 +93,13 @@ async def render_building_register(request: AddressRequest, token: str = Depends
         if not address_result["success"]:
             raise HTTPException(status_code=400, detail=f"주소 검색 실패: {address_result['message']}")
 
-        if request.dong:
-            dong_result = search_dong(driver=driver, dong=request.dong, num=request.num)
-            if not dong_result["success"]:
-                raise HTTPException(status_code=400, detail=f"동 검색 실패: {dong_result['dong_list']}")
+        dong_result = search_dong(driver=driver, dong=request.dong, num=request.num)
+        if not dong_result["success"]:
+            raise HTTPException(status_code=400, detail=f"동 검색 실패: {dong_result['dong_list']}")
 
-        if request.num:
-            num_result = search_num(driver=driver, dong=request.dong, num=request.num)
-            if not num_result["success"]:
-                raise HTTPException(status_code=400, detail=f"호수 검색 실패: {num_result['num_list']}")
+        num_result = search_num(driver=driver, dong=request.dong, num=request.num)
+        if not num_result["success"]:
+            raise HTTPException(status_code=400, detail=f"호수 검색 실패: {num_result['num_list']}")
 
         building_register_html = get_building_register(
             driver=driver,

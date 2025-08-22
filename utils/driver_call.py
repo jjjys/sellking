@@ -1,13 +1,8 @@
-
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import SessionNotCreatedException
 import re
 import undetected_chromedriver as uc
-
-from selenium.webdriver.common.keys import Keys
-import time
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+import logging
+logger = logging.getLogger(__name__)
 
 def get_chrome_options():
     """ChromeOptions 설정을 반환하는 함수"""
@@ -40,8 +35,8 @@ def driver_call():
         match = re.search(r'Current browser version is (\d+)', str(e))
         if match:
             current_version = int(match.group(1))
-            print(f"Detected current Chrome browser version: {current_version}")
-            print(f"Retrying with version_main={current_version}...")
+            logger.info(f"Detected current Chrome browser version: {current_version}")
+            logger.info(f"Retrying with version_main={current_version}...")
             # 현재 브라우저 버전에 맞는 드라이버로 재시도
             driver = initialize_driver(version_main=current_version)
         else:

@@ -22,6 +22,8 @@ services:
       - "sellking-building-register-ui"
       - "--config"
       - "/etc/ngrok.yml"
+      - "--log=stdout"
+      - "--log-level=info"
     env_file:
       - .env
     volumes:

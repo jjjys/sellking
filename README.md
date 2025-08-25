@@ -68,6 +68,10 @@ GUI, CLI 환경 차이로 인해 윈도우(GUI) 환경에서 코드 수정 및 �
 source ~/.bashrc
 docker-compose version
 ```
+5. 서버 실행 후 ngrok public url 확인
+```
+docker logs building-register_ngrok_1 | awk -F"url=" '/url=https:\/\// {print $2}'
+```
 
 ### 유지보수 시 주의사항
 1. "driver_call.py" 파일 GUI 환경에서 디버깅 시 아래 항목 주석

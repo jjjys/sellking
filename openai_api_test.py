@@ -1,8 +1,8 @@
 '''
-프롬프트 수정할 때 임시 사용 파일
-
+아래 테스트를 위한 임시 사용 파일
+1.프롬프트 수정
+2.LLM 모델 수정
 '''
-
 
 import os, json
 from dotenv import load_dotenv
@@ -10,15 +10,8 @@ from openai import OpenAI
 
 
 def openai_api(dong=None, num=None, gov24_dong_num=None):
-    '''
-    설명:
-    입력:동&호수 데이터, 정부24 동 혹은 호수 선택 리스트
-    출력:정부24 동 혹은 호수 값 중 1개
-    '''
     # 사전 작업
     load_dotenv()  # .env 읽기
-    #OPENAI_API_KEY_TMP = os.getenv("OPENAI_API_KEY_TMP")
-    #OPENAI_API_KEY_PRG = os.getenv("OPENAI_API_KEY_PRG")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     client = OpenAI(api_key = OPENAI_API_KEY)
 
@@ -53,7 +46,7 @@ def openai_api(dong=None, num=None, gov24_dong_num=None):
 
     # api 호출
     completion01 = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="o1",
     store=True,
     messages=[
         {"role": "user", "content": prompt}
@@ -89,64 +82,6 @@ def main():
     input()
 
     
-
-''' # 아래는 테스트 부분
-    for i in range(0,10):
-        # 주소 검색
-        #search_address(driver=driver, address='서울특별시 동대문구 장한로28가길 17')
-        search_address(driver=driver, address='경기도 수원시 권선구 덕영대로1190번길 100')
-        #search_address(driver=driver, address='성미산로20')
-        # 동 검색
-        if search_dong(driver=driver, dong='717동 1501호'):
-            # 호수 검색
-            search_num(driver=driver, num='717동 1501호')
-
-    
-search_address(driver=driver, address='경기도 남양주시 별내1로 6')
-search_dong(driver=driver, dong='상가1층 137호'):
-search_num(driver=driver, num='상가1층 137호')
-# 동
-힐스테이트 별내역 101동(숙박시설(생활숙박시설) : 25577.4216)
-힐스테이트 별내역 102동(숙박시설(생활숙박시설) : 31496.3486)	
-힐스테이트 별내역 103동(숙박시설(생활숙박시설) : 27088.4654)	
-*힐스테이트 별내역 판매시설동(판매시설 : 6533.8245)
-# 호수
-137호
-
-search_address(driver=driver, address='서울특별시 구로구 디지털로26길 43')
-search_dong(driver=driver, dong='L 7층 전체')
-search_num(driver=driver, num='L 7층 전체')
-# 동
-1개
-# 호수
-L701
-
-search_address(driver=driver, address='서울특별시 구로구 가마산로 97')
-search_dong(driver=driver, dong='현대로얄아파트 4층')
-search_num(driver=driver, num='현대로얄아파트 4층')
-# 동
-1개
-# 호수
-4층 10호
-
-
-search_address(driver=driver, address='경기도 의정부시 민락로 195')
-search_dong(driver=driver, dong='H동 302')
-search_num(driver=driver, num='H동 302')
-# 동
-1개
-# 호수
-106
-
-search_address(driver=driver, address='서울특별시 금천구 가산디지털2로 169-23')
-search_dong(driver=driver, dong='기숙사 302')
-search_num(driver=driver, num='기숙사 302')
-# 동
-기숙사
-# 호수
-302
-
-    '''
 
 if __name__ == '__main__':
     main()

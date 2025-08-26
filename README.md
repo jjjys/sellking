@@ -65,6 +65,8 @@ GUI, CLI 환경 차이로 인해 윈도우(GUI) 환경에서 코드 수정 및 �
 4. docker-compose up으로 서버 실행
 	docker-compose 안되는 경우(아래 진행)
 ```
+curl -O https://gist.githubusercontent.com/kurokobo/25e41503eb060fee8d8bec1dd859eff3/raw/0d7cd29472f0eaa26ce424071456ad84b24fb318/installer.sh
+bash ./installer.sh
 source ~/.bashrc
 docker-compose version
 ```

@@ -1,6 +1,10 @@
 ## Building Register API Server Maintenance Guide(정부24 건축물자동 발급 API 서버 유지보수 가이드)
 GUI, CLI 환경 차이로 인해 윈도우(GUI) 환경에서 코드 수정 및 테스트 진행 후 배포하는 과정으로 진행.
 
+## 시연 영상
+본 과정은 GCP 서버를 통해 Headless 옵션을 제거하여 내부적으로 어떻게 작업이 진행되는지 설명을 위한 영상입니다.
+https://www.youtube.com/playlist?list=PL6loPCWWi3j8TJ4YXhliGLsLgp476L7tm
+
 ### 유지보수 작업 대상
 1. LLM api 사용 코드 업데이트 및 모델 변경(gpt, gemini)
 2. 정부24 html 태그 변경 업데이트

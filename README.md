@@ -1,4 +1,4 @@
-## Building Register API Server Maintenance Guide
+## Building Register API Server Maintenance Guide(정부24 건축물자동 발급 API 서버 유지보수 가이드)
 GUI, CLI 환경 차이로 인해 윈도우(GUI) 환경에서 코드 수정 및 테스트 진행 후 배포하는 과정으로 진행.
 
 ### 유지보수 작업 대상
